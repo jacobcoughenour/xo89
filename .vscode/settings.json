@@ -1,0 +1,15 @@
+{
+	"files.associations": {
+		"*.dbclient-js": "javascript",
+		"*.json": "jsonc",
+		"bitset": "cpp",
+		"regex": "cpp",
+		"optional": "cpp",
+		"new": "cpp",
+		"any": "cpp",
+		"memory": "cpp",
+		"future": "cpp",
+		"random": "cpp"
+	},
+	"C_Cpp.errorSquiggles": "enabled"
+}

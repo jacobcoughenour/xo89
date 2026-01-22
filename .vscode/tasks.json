@@ -1,0 +1,284 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "stop emulation",
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"windows": {
+				"command": "taskkill /im mGBA.exe /F && taskkill /im \"NO`$GBA.exe\" /F"
+			},
+			"osx": {
+				"command": "killall mGBA"
+			},
+			"linux": {
+				"command": "killall mgba-qt"
+			}
+		},
+		{
+			"label": "make debug",
+			"type": "process",
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"linux": {
+				"command": "bash",
+				"args": [
+					"-c",
+					"make DEBUG=1 -j$(nproc)"
+				]
+			},
+			"osx": {
+				"command": "make",
+				"args": [
+					"DEBUG=1",
+					"-j8"
+				]
+			},
+			"windows": {
+				"command": "make",
+				"args": [
+					"DEBUG=1",
+					"-j12"
+				]
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"clear": true,
+				"reveal": "always",
+				"revealProblems": "never"
+			},
+		},
+		{
+			"label": "make example debug",
+			"type": "process",
+			"options": {
+				"cwd": "${workspaceFolder}/butano/examples/${input:example_name}"
+			},
+			"linux": {
+				"command": "bash",
+				"args": [
+					"-c",
+					"make DEBUG=1 -j$(nproc)"
+				]
+			},
+			"osx": {
+				"command": "make",
+				"args": [
+					"DEBUG=1",
+					"-j8"
+				]
+			},
+			"windows": {
+				"command": "make",
+				"args": [
+					"DEBUG=1",
+					"-j12"
+				]
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "make release",
+			"type": "process",
+			"command": "make",
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"linux": {
+				"command": "bash",
+				"args": [
+					"-c",
+					"make DEBUG=0 -j$(nproc)"
+				]
+			},
+			"osx": {
+				"args": [
+					"DEBUG=0"
+				]
+			},
+			"windows": {
+				"args": [
+					"DEBUG=0"
+				]
+			},
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "clean",
+			"type": "shell",
+			"command": "make clean",
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+		},
+		{
+			"label": "gdb-debug",
+			"type": "shell",
+			"dependsOn": [
+				"make debug"
+			],
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"windows": {
+				"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/bloxorz.elf;sleep 5;echo debuggerReady"
+			},
+			"osx": {
+				"command": "/Users/jacob/Applications/mGBA.app/Contents/MacOS/mGBA",
+				"args": [
+					"-g",
+					"${workspaceFolder}/game/bloxorz.gba"
+				]
+			},
+			"linux": {
+				"command": "/usr/bin/mgba-qt",
+				"args": [
+					"-g",
+					"${workspaceFolder}/game/bloxorz.gba"
+				]
+			},
+			"presentation": {
+				"clear": true,
+				"reveal": "always",
+				"revealProblems": "never"
+			},
+			"problemMatcher": {
+				"pattern": [
+					{
+						"regexp": ".",
+						"file": 1,
+						"location": 2,
+						"message": 3
+					}
+				],
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".",
+					"endsPattern": "."
+				}
+			}
+		},
+		{
+			"label": "run NO$GBA",
+			"dependsOn": [
+				"make debug"
+			],
+			"type": "shell",
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"command": "C:/NO$GBADebugger/NO$GBA.exe ${workspaceFolder}/game/bloxorz.elf",
+			"problemMatcher": []
+		},
+		{
+			"label": "run mGBA",
+			"dependsOn": [
+				"make debug"
+			],
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceFolder}/game"
+			},
+			"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/bloxorz.gba",
+			"linux": {
+				"command": "mgba-qt",
+				"args": [
+					"-g",
+					"${workspaceFolder}/game/bloxorz.gba"
+				]
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "run example NO$GBA",
+			"dependsOn": [
+				"make example debug"
+			],
+			"isBackground": true,
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceFolder}/butano/examples/${input:example_name}"
+			},
+			"command": "C:/NO$GBADebugger/NO$GBA.exe ${workspaceFolder}/butano/examples/${input:example_name}/${input:example_name}.elf",
+			"problemMatcher": []
+		},
+		{
+			"label": "run example mGBA",
+			"dependsOn": [
+				"make example debug"
+			],
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceFolder}/butano/examples/${input:example_name}"
+			},
+			"command": "C:/mGBA/mGBA.exe ${input:example_name}.elf -3",
+			"osx": {
+				"command": "open -a mGBA --args \"${workspaceFolder}/butano/examples/${input:example_name}/${input:example_name}.elf\""
+			},
+			"linux": {
+				"command": "mgba-qt",
+				"args": [
+					"${workspaceFolder}/butano/examples/${input:example_name}/${input:example_name}.elf"
+				]
+			}
+		}
+	],
+	"inputs": [
+		{
+			"type": "pickString",
+			"id": "example_name",
+			"description": "Example:",
+			"options": [
+				"affine_bgs",
+				"audio",
+				"audio_player",
+				"blending",
+				"cameras",
+				"core",
+				"date_time",
+				"dmg_audio",
+				"dp_direct_bitmap_bgs",
+				"dynamic_affine_bg",
+				"dynamic_regular_bg",
+				"external_tool",
+				"green_swap",
+				"hdma_palette",
+				"hdma_polygons",
+				"keypad",
+				"keypad_commands",
+				"link",
+				"log",
+				"map_collision",
+				"mode_7",
+				"mosaic",
+				"palette_bitmap_bgs",
+				"palettes",
+				"polygons",
+				"profiler",
+				"random",
+				"regular_bgs",
+				"rumble",
+				"sp_direct_bitmap_bgs",
+				"sprite_affine_mats",
+				"sprites",
+				"sram",
+				"text",
+				"texture_polygons",
+				"timer",
+				"windows",
+				"world_map",
+			]
+		}
+	]
+}

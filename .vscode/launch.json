@@ -1,0 +1,48 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "2.0.0",
+	"configurations": [
+		{
+			"name": "(gdb) Launch",
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "make debug",
+			"postDebugTask": "stop emulation",
+			"serverLaunchTimeout": 10000,
+			"stopAtEntry": false,
+			"program": "${workspaceFolder}/game/bloxorz.elf",
+			"MIMode": "gdb",
+			"externalConsole": true,
+			"cwd": "${workspaceFolder}/game",
+			"targetArchitecture": "arm",
+			"miDebuggerServerAddress": "localhost:2345",
+			// https://felixjones.co.uk/mgba_gdb/vscode.html
+			"windows": {
+				"miDebuggerPath": "C:/devkitPro/devkitARM/bin/arm-none-eabi-gdb.exe",
+				"setupCommands": [
+					{
+						"text": "shell start /b \"\" \"C:/mGBA/mGBA.exe\" -g \"${workspaceFolder}/game/bloxorz.elf\""
+					}
+				]
+			},
+			"osx": {
+				"miDebuggerPath": "/opt/devkitPro/devkitARM/bin/arm-none-eabi-gdb",
+				"setupCommands": [
+					{
+						"text": "shell open -a mGBA --args -g \"${workspaceFolder}/game/bloxorz.elf\""
+					}
+				]
+			},
+			"linux": {
+				"miDebuggerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gdb",
+				"setupCommands": [
+					{
+						"text": "shell \"mgba-qt\" -g \"${workspaceFolder}/game/bloxorz.elf\" &"
+					}
+				]
+			}
+		}
+	]
+}

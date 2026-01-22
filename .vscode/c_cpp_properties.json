@@ -1,0 +1,102 @@
+{
+	"configurations": [
+		{
+			"name": "Mac",
+			"includePath": [
+				"/usr/local/include",
+				"${workspaceFolder}",
+				"${workspaceFolder}/game",
+				"${workspaceFolder}/game/build",
+				"${workspaceFolder}/game/include",
+				"${workspaceFolder}/../butano/butano/include",
+				"/opt/devkitPro/devkitARM/arm-none-eabi/include",
+				"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+			],
+			"defines": [],
+			"intelliSenseMode": "clang-x64",
+			"browse": {
+				"path": [
+					"/usr/local/include",
+					"${workspaceFolder}",
+					"${workspaceFolder}/game",
+					"${workspaceFolder}/game/build",
+					"${workspaceFolder}/game/include",
+					"${workspaceFolder}/../butano/butano/include",
+					"/opt/devkitPro/devkitARM/arm-none-eabi/include",
+					"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+				],
+				"limitSymbolsToIncludedHeaders": true,
+				"databaseFilename": ""
+			},
+			"macFrameworkPath": [
+				"/System/Library/Frameworks",
+				"/Library/Frameworks"
+			],
+			"cStandard": "c11",
+			"cppStandard": "c++20"
+		},
+		{
+			"name": "Linux",
+			"includePath": [
+				"/usr/include",
+				"/usr/local/include",
+				"${workspaceFolder}/game/include",
+				"/opt/devkitpro/devkitARM/arm-none-eabi/include",
+				"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include",
+				"${workspaceFolder}/butano/butano/include",
+				"${workspaceFolder}/game/build"
+			],
+			"defines": [],
+			"intelliSenseMode": "clang-x64",
+			"browse": {
+				"path": [
+					"/usr/include",
+					"/usr/local/include",
+					"${workspaceFolder}/game/include",
+					"/opt/devkitpro/devkitARM/arm-none-eabi/include",
+					"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include",
+					"${workspaceFolder}/butano/butano/include",
+					"${workspaceFolder}/game/build"
+				],
+				"limitSymbolsToIncludedHeaders": true,
+				"databaseFilename": ""
+			},
+			"cStandard": "c11",
+			"cppStandard": "c++20"
+		},
+		{
+			"name": "Win32",
+			"includePath": [
+				"${workspaceFolder}/game",
+				"${workspaceFolder}/game/build",
+				"${workspaceFolder}/game/include",
+				"${workspaceFolder}/../butano/butano/include",
+				"C:/devkitPro/devkitARM/arm-none-eabi/include",
+				"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+			],
+			"defines": [
+				"_DEBUG",
+				"UNICODE",
+				"_UNICODE",
+				"ARM7",
+				"WIN32"
+			],
+			"intelliSenseMode": "msvc-x64",
+			"browse": {
+				"path": [
+					"${workspaceFolder}/game",
+					"${workspaceFolder}/game/build",
+					"${workspaceFolder}/game/include",
+					"${workspaceFolder}/../butano/butano/include",
+					"C:/devkitPro/devkitARM/arm-none-eabi/include",
+					"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+				],
+				"limitSymbolsToIncludedHeaders": true,
+				"databaseFilename": ""
+			},
+			"cStandard": "c11",
+			"cppStandard": "c++17"
+		}
+	],
+	"version": 4
+}
