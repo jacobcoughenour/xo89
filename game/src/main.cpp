@@ -1,18 +1,21 @@
 #include "bn_core.h"
 #include "bn_memory.h"
 
+#include "game_state.h"
 #include "scene.h"
 #include "scene_type.h"
-#include "game_state.h"
 
 #include "flying_scene.h"
 
 #include "bn_common.h"
 #include "bn_memory.h"
 
+#include "tests.h"
 
 int main() {
 	bn::core::init();
+
+	game::tests::run_tests();
 
 	bn::unique_ptr<game::scene> current_scene;
 	bn::optional<game::scene_type> next_scene = game::scene_type::FLYING;

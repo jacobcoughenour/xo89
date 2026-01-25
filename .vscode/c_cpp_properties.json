@@ -33,7 +33,7 @@
 				"/Library/Frameworks"
 			],
 			"cStandard": "c11",
-			"cppStandard": "c++20"
+			"cppStandard": "c++23"
 		},
 		{
 			"name": "Linux",
@@ -62,7 +62,7 @@
 				"databaseFilename": ""
 			},
 			"cStandard": "c11",
-			"cppStandard": "c++20"
+			"cppStandard": "c++23"
 		},
 		{
 			"name": "Win32",
@@ -95,7 +95,7 @@
 				"databaseFilename": ""
 			},
 			"cStandard": "c11",
-			"cppStandard": "c++17"
+			"cppStandard": "c++23"
 		}
 	],
 	"version": 4

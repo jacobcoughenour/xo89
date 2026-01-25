@@ -1,8 +1,15 @@
 #ifndef FLYING_SCENE_H
 #define FLYING_SCENE_H
 
-#include "scene.h"
 #include "game_state.h"
+#include "helpers.h"
+#include "scene.h"
+
+#include "bn_affine_bg_ptr.h"
+#include "bn_core.h"
+#include "bn_keypad.h"
+#include "bn_sprite_ptr.h"
+#include "bn_sprite_tiles_ptr.h"
 
 namespace game {
 
@@ -21,7 +28,6 @@ private:
 	bn::fixed _ship_rotation;
 
 	bn::vector<bn::sprite_ptr, 32> _floating_objs;
-
 };
 } //namespace game
 #endif

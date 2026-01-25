@@ -1,13 +1,13 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include "bn_color.h"
 #include "bn_fixed.h"
+#include "bn_fixed_point.h"
 #include "bn_math.h"
 #include "bn_point.h"
 #include "bn_sstream.h"
 #include "bn_string.h"
-#include "bn_color.h"
-#include "bn_fixed_point.h"
 
 namespace game {
 
@@ -29,6 +29,30 @@ public:
 
 	static inline const bn::color lerp_color(bn::color a, bn::color b, bn::fixed t) {
 		return bn::color(lerp_int(a.red(), b.red(), t), lerp_int(a.green(), b.green(), t), lerp_int(a.blue(), b.blue(), t));
+	}
+
+	static inline const bn::fixed fmod(bn::fixed x, bn::fixed y) {
+		return x - (x / y).floor_integer() * y;
+	}
+
+	static inline const bn::fixed fmod1(bn::fixed x) {
+		return x - x.floor_integer();
+	}
+
+	static inline const bn::fixed fposmod(bn::fixed x, bn::fixed y) {
+		bn::fixed value = fmod(x, y);
+		if (((value < 0) && (y > 0)) || ((value > 0) && (y < 0))) {
+			value += y;
+		}
+		return value;
+	}
+
+	static inline const bn::fixed fposmod1(bn::fixed x) {
+		bn::fixed value = fmod1(x);
+		if (value < 0) {
+			value += 1;
+		}
+		return value;
 	}
 
 	static inline int get_digit(int num, int pos) {
