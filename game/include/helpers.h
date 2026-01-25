@@ -31,12 +31,16 @@ public:
 		return bn::color(lerp_int(a.red(), b.red(), t), lerp_int(a.green(), b.green(), t), lerp_int(a.blue(), b.blue(), t));
 	}
 
+	static inline const int truncate(bn::fixed x) {
+		return x < 0 ? -(-x).floor_integer() : x.floor_integer();
+	}
+
 	static inline const bn::fixed fmod(bn::fixed x, bn::fixed y) {
-		return x - (x / y).floor_integer() * y;
+		return x - truncate(x / y) * y;
 	}
 
 	static inline const bn::fixed fmod1(bn::fixed x) {
-		return x - x.floor_integer();
+		return x - truncate(x);
 	}
 
 	static inline const bn::fixed fposmod(bn::fixed x, bn::fixed y) {
@@ -54,6 +58,14 @@ public:
 		}
 		return value;
 	}
+
+	static inline const bn::fixed_point rad_to_dir(bn::fixed rad) {
+		rad /= PI_2;
+		return bn::fixed_point(bn::sin(rad), bn::cos(rad));
+	}
+
+	static constexpr double PI = 3.1415926535897932384626433832795;
+	static constexpr double PI_2 = 3.1415926535897932384626433832795 * 2.0;
 
 	static inline int get_digit(int num, int pos) {
 		if (num == 0) {
