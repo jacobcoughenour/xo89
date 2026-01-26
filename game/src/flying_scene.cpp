@@ -10,7 +10,23 @@ namespace game {
 
 flying_scene::flying_scene(game_state &state) :
 		_state(state),
+		_camera(bn::camera_ptr::create(0, 0)),
+		_rng(1),
 		_ship_sprite(bn::sprite_items::ship.create_sprite()) {
+	_ship_sprite.set_camera(_camera);
+
+	for (int i = 0; i < 32; i++) {
+		bn::sprite_item item = bn::sprite_items::dev8;
+		// if (_rng.get_bool()) {
+		// 	item = bn::sprite_items::dev16;
+		// }
+		bn::sprite_ptr s = item.create_sprite();
+		s.set_camera(_camera);
+		s.set_position(bn::fixed_point(_rng.get_fixed() % 128, _rng.get_fixed() % 128));
+		// _floating_objs.push_back(s);
+	}
+
+	_ship_sprite.set_bg_priority(0);
 }
 
 flying_scene::~flying_scene() {
@@ -28,7 +44,7 @@ bn::optional<scene_type> flying_scene::update() {
 	_ship_rotation = helpers::fposmod(_ship_rotation, helpers::PI_2);
 
 	_ship_sprite.set_tiles(bn::sprite_items::ship.tiles_item()
-					.create_tiles(((_ship_rotation / helpers::PI_2) * 16.0).floor_integer() % 16));
+					.create_tiles(((_ship_rotation / helpers::PI_2) * 32.0).floor_integer() % 32));
 
 	if (bn::keypad::a_held()) {
 		_ship_velocity -= helpers::rad_to_dir(-_ship_rotation) * bn::fixed(0.05);
@@ -40,7 +56,9 @@ bn::optional<scene_type> flying_scene::update() {
 	pos += _ship_velocity;
 	_ship_sprite.set_position(pos);
 
-	update_text();
+	_camera.set_position(_ship_sprite.position());
+
+	// update_text();
 
 	return result;
 }

@@ -31,7 +31,7 @@ func main() {
 
 func createShipSprites() error {
 
-	total_frames := 16
+	total_frames := 32
 
 	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 16, Y: 16 * total_frames}})
 	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)

@@ -31,7 +31,7 @@ public:
 		return bn::color(lerp_int(a.red(), b.red(), t), lerp_int(a.green(), b.green(), t), lerp_int(a.blue(), b.blue(), t));
 	}
 
-	static inline const int truncate(bn::fixed x) {
+	static inline int truncate(bn::fixed x) {
 		return x < 0 ? -(-x).floor_integer() : x.floor_integer();
 	}
 
