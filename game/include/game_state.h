@@ -1,6 +1,8 @@
 #ifndef GAME_STATE_H
 #define GAME_STATE_H
 
+#include "chunked_space.h"
+
 #include "bn_array.h"
 #include "bn_bg_palettes.h"
 #include "bn_bg_tiles.h"

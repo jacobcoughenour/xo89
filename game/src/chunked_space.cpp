@@ -4,14 +4,27 @@ namespace game {
 
 chunked_space::chunked_space(bn::camera_ptr camera) :
 		_camera(camera),
-		_chunks() {
+		_chunks(),
+		_rng() {
+	for (int i = 0; i < MAX_CHUNKS; i++) {
+		_chunks.push_back(chunk{
+				.objs = bn::vector<floating_object, MAX_OBJS_PER_CHUNK>() });
+
+		for (int j = 0; j < MAX_OBJS_PER_CHUNK; j++) {
+			floating_object obj = floating_object{
+				.velocity = bn::fixed_point(0, 0),
+				.position = _chunk_index_to_pos(i) + bn::fixed_point(_rng.get_fixed() % CHUNK_SIZE, _rng.get_fixed() % CHUNK_SIZE)
+			};
+			_chunks[i].objs.push_back(obj);
+		}
+	}
 }
 
 chunked_space::~chunked_space() {
 }
 
 bn::point chunked_space::_chunk_index_to_pos(int i) {
-	return bn::point((i % SPACE_SIZE) * CHUNK_SIZE, (i / SPACE_SIZE) * CHUNK_SIZE);
+	return bn::point((i % SPACE_SIZE - SPACE_SIZE / 2) * CHUNK_SIZE, (i / SPACE_SIZE - SPACE_SIZE / 2) * CHUNK_SIZE);
 }
 
 bool chunked_space::_is_chunk_in_view(int i) {
@@ -44,13 +57,13 @@ bool chunked_space::_is_point_in_view(bn::fixed_point point) {
 	bn::fixed top = _camera.y() - 80;
 	bn::fixed bottom = _camera.y() + 80;
 
-	if (point.x() < left) {
+	if (point.x() + 8 < left) {
 		return false;
 	}
 	if (point.x() > right) {
 		return false;
 	}
-	if (point.y() < top) {
+	if (point.y() + 8 < top) {
 		return false;
 	}
 	if (point.y() > bottom) {
@@ -95,26 +108,33 @@ void chunked_space::update() {
 	int sprite_index = 0;
 
 	for (int i = 0; i < MAX_CHUNKS; i++) {
+		if (sprite_index >= MAX_VISIBLE_OBJS) {
+			break;
+		}
 		if (!_is_chunk_in_view(i)) {
 			continue;
 		}
 		chunk &c = _chunks.at(i);
 		for (int j = 0; j < c.objs.size(); j++) {
-			floating_object &obj = c.objs.at(j);
+			if (sprite_index >= MAX_VISIBLE_OBJS) {
+				break;
+			}
 
+			floating_object &obj = c.objs.at(j);
 			if (!_is_point_in_view(obj.position)) {
 				continue;
 			}
 
-			BN_ASSERT(i <= _obj_sprites.size());
+			BN_ASSERT(sprite_index <= _obj_sprites.size());
 
-			if (i >= _obj_sprites.size()) {
+			if (sprite_index == _obj_sprites.size()) {
 				_obj_sprites.push_back(bn::sprite_items::dev8.create_sprite());
 			}
-			bn::sprite_ptr &existing = _obj_sprites.at(i);
+			bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
 			existing.set_position(obj.position);
 			existing.set_visible(true);
-			i++;
+			existing.set_camera(_camera);
+			sprite_index++;
 		}
 	}
 

@@ -12,20 +12,9 @@ flying_scene::flying_scene(game_state &state) :
 		_state(state),
 		_camera(bn::camera_ptr::create(0, 0)),
 		_rng(1),
+		_space(_camera),
 		_ship_sprite(bn::sprite_items::ship.create_sprite()) {
 	_ship_sprite.set_camera(_camera);
-
-	for (int i = 0; i < 32; i++) {
-		bn::sprite_item item = bn::sprite_items::dev8;
-		// if (_rng.get_bool()) {
-		// 	item = bn::sprite_items::dev16;
-		// }
-		bn::sprite_ptr s = item.create_sprite();
-		s.set_camera(_camera);
-		s.set_position(bn::fixed_point(_rng.get_fixed() % 128, _rng.get_fixed() % 128));
-		// _floating_objs.push_back(s);
-	}
-
 	_ship_sprite.set_bg_priority(0);
 }
 
@@ -58,7 +47,7 @@ bn::optional<scene_type> flying_scene::update() {
 
 	_camera.set_position(_ship_sprite.position());
 
-	// update_text();
+	_space.update();
 
 	return result;
 }

@@ -1,6 +1,7 @@
 #ifndef FLYING_SCENE_H
 #define FLYING_SCENE_H
 
+#include "chunked_space.h"
 #include "game_state.h"
 #include "helpers.h"
 #include "scene.h"
@@ -17,12 +18,6 @@
 
 namespace game {
 
-struct floating_pickup {
-	bn::fixed_point position;
-	bn::fixed_point velocity;
-	// todo item def
-};
-
 class flying_scene : public scene {
 public:
 	explicit flying_scene(game_state &state);
@@ -37,6 +32,8 @@ private:
 	bn::camera_ptr _camera;
 	bn::seed_random _rng;
 
+	chunked_space _space;
+
 	// do we want to combine these into a "transform"
 	bn::sprite_ptr _ship_sprite;
 	bn::fixed_point _ship_velocity;
@@ -46,8 +43,6 @@ private:
 	// bn::vector<bn::sprite_ptr, 8> _projectiles;
 
 	bn::vector<bn::sprite_ptr, 16> _text_sprites;
-
-	bn::vector<floating_pickup, 128>
 };
 } //namespace game
 #endif
