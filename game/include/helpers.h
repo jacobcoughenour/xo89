@@ -67,6 +67,32 @@ public:
 	static constexpr double PI = 3.1415926535897932384626433832795;
 	static constexpr double PI_2 = 3.1415926535897932384626433832795 * 2.0;
 
+	static inline bn::fixed point_length(bn::fixed_point point) {
+		return bn::sqrt(point.x() * point.x() + point.y() * point.y());
+	}
+
+	static inline const bn::fixed_point normalize_point(bn::fixed_point point) {
+		bn::fixed d = point_length(point);
+		if (d == 0) {
+			return bn::fixed_point(0, 0);
+		}
+		return point / d;
+	}
+
+	static inline bn::fixed distance(bn::fixed_point a, bn::fixed_point b) {
+		return point_length(a - b);
+	}
+
+	// bounding box test between two points.
+	// this is faster than doing a real distance check.
+	static inline const bool box_dist_test(bn::fixed_point a, bn::fixed_point b, bn::fixed dist) {
+		return bn::abs(a.x() - b.x()) <= dist && bn::abs(a.y() - b.y()) <= dist;
+	}
+
+	static inline const bn::fixed max_box_dist(bn::fixed_point a, bn::fixed_point b) {
+		return bn::max(bn::abs(a.x() - b.x()), bn::abs(a.y() - b.y()));
+	}
+
 	static inline int get_digit(int num, int pos) {
 		if (num == 0) {
 			return 0;

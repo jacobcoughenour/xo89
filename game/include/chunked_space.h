@@ -1,6 +1,8 @@
 #ifndef CHUNKED_SPACE_H
 #define CHUNKED_SPACE_H
 
+#include "helpers.h"
+
 #include "bn_camera_ptr.h"
 #include "bn_fixed_point.h"
 #include "bn_list.h"
@@ -17,7 +19,7 @@ namespace game {
 
 class chunked_space {
 public:
-	static const int MAX_OBJS_PER_CHUNK = 16;
+	static const int MAX_OBJS_PER_CHUNK = 32;
 	static const int CHUNK_SIZE = 128;
 	static const int SPACE_SIZE = 8;
 	static const int MAX_CHUNKS = SPACE_SIZE * SPACE_SIZE;

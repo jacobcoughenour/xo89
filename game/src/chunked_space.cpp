@@ -76,6 +76,8 @@ void chunked_space::update() {
 	// go through all the loaded chunks and move the objects by their current
 	// velocity
 
+	bn::fixed_point attr = _camera.position();
+
 	for (int i = 0; i < MAX_CHUNKS; i++) {
 		if (!_is_chunk_in_view(i)) {
 			continue;
@@ -87,7 +89,28 @@ void chunked_space::update() {
 
 		for (int j = 0; j < c.objs.size(); j++) {
 			floating_object &obj = c.objs.at(j);
+
+			bn::fixed dist = helpers::max_box_dist(obj.position, attr);
+
+			if (dist < 2) {
+				// pickup
+				c.objs.erase(&obj);
+				j--;
+				continue;
+			}
+
+			constexpr int d = 48;
+
+			if (dist > d) {
+				continue;
+			}
+
+			bn::fixed len = helpers::distance(attr, obj.position);
+			bn::fixed_point dir = helpers::normalize_point(attr - obj.position);
+
+			obj.velocity += dir * bn::min(bn::fixed(10), bn::max(bn::fixed(d - len), bn::fixed(0.2))) * bn::fixed(0.03);
 			obj.position += obj.velocity;
+			obj.velocity *= bn::fixed(0.96);
 		}
 	}
 
