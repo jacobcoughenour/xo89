@@ -142,20 +142,20 @@
 				"cwd": "${workspaceFolder}/game"
 			},
 			"windows": {
-				"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/bloxorz.elf;sleep 5;echo debuggerReady"
+				"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/spacegba.elf;sleep 5;echo debuggerReady"
 			},
 			"osx": {
 				"command": "/Users/jacob/Applications/mGBA.app/Contents/MacOS/mGBA",
 				"args": [
 					"-g",
-					"${workspaceFolder}/game/bloxorz.gba"
+					"${workspaceFolder}/game/spacegba.gba"
 				]
 			},
 			"linux": {
 				"command": "/usr/bin/mgba-qt",
 				"args": [
 					"-g",
-					"${workspaceFolder}/game/bloxorz.gba"
+					"${workspaceFolder}/game/spacegba.gba"
 				]
 			},
 			"presentation": {
@@ -189,7 +189,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}/game"
 			},
-			"command": "C:/NO$GBADebugger/NO$GBA.exe ${workspaceFolder}/game/bloxorz.elf",
+			"command": "C:/NO$GBADebugger/NO$GBA.exe ${workspaceFolder}/game/spacegba.elf",
 			"problemMatcher": []
 		},
 		{
@@ -201,12 +201,12 @@
 			"options": {
 				"cwd": "${workspaceFolder}/game"
 			},
-			"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/bloxorz.gba",
+			"command": "C:/mGBA/mGBA.exe -g ${workspaceFolder}/game/spacegba.gba",
 			"linux": {
 				"command": "mgba-qt",
 				"args": [
 					"-g",
-					"${workspaceFolder}/game/bloxorz.gba"
+					"${workspaceFolder}/game/spacegba.gba"
 				]
 			},
 			"problemMatcher": []

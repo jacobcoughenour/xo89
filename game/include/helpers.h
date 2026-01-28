@@ -85,7 +85,7 @@ public:
 
 	// bounding box test between two points.
 	// this is faster than doing a real distance check.
-	static inline const bool box_dist_test(bn::fixed_point a, bn::fixed_point b, bn::fixed dist) {
+	static inline bool box_dist_test(bn::fixed_point a, bn::fixed_point b, bn::fixed dist) {
 		return bn::abs(a.x() - b.x()) <= dist && bn::abs(a.y() - b.y()) <= dist;
 	}
 

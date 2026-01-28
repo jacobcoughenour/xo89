@@ -12,7 +12,7 @@
 			"postDebugTask": "stop emulation",
 			"serverLaunchTimeout": 10000,
 			"stopAtEntry": false,
-			"program": "${workspaceFolder}/game/bloxorz.elf",
+			"program": "${workspaceFolder}/game/spacegba.elf",
 			"MIMode": "gdb",
 			"externalConsole": true,
 			"cwd": "${workspaceFolder}/game",
@@ -23,7 +23,7 @@
 				"miDebuggerPath": "C:/devkitPro/devkitARM/bin/arm-none-eabi-gdb.exe",
 				"setupCommands": [
 					{
-						"text": "shell start /b \"\" \"C:/mGBA/mGBA.exe\" -g \"${workspaceFolder}/game/bloxorz.elf\""
+						"text": "shell start /b \"\" \"C:/mGBA/mGBA.exe\" -g \"${workspaceFolder}/game/spacegba.elf\""
 					}
 				]
 			},
@@ -31,7 +31,7 @@
 				"miDebuggerPath": "/opt/devkitPro/devkitARM/bin/arm-none-eabi-gdb",
 				"setupCommands": [
 					{
-						"text": "shell open -a mGBA --args -g \"${workspaceFolder}/game/bloxorz.elf\""
+						"text": "shell open -a mGBA --args -g \"${workspaceFolder}/game/spacegba.elf\""
 					}
 				]
 			},
@@ -39,7 +39,7 @@
 				"miDebuggerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gdb",
 				"setupCommands": [
 					{
-						"text": "shell \"mgba-qt\" -g \"${workspaceFolder}/game/bloxorz.elf\" &"
+						"text": "shell \"mgba-qt\" -g \"${workspaceFolder}/game/spacegba.elf\" &"
 					}
 				]
 			}

@@ -16,6 +16,7 @@ flying_scene::flying_scene(game_state &state) :
 		_ship_sprite(bn::sprite_items::ship.create_sprite()) {
 	_ship_sprite.set_camera(_camera);
 	_ship_sprite.set_bg_priority(0);
+	_ship_sprite.set_position(_space.spawn_point());
 }
 
 flying_scene::~flying_scene() {
