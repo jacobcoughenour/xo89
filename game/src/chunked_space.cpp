@@ -129,6 +129,7 @@ void chunked_space::update() {
 			_unloaded_chunks[chunk_i] = unloaded;
 
 			_loaded_chunks.erase(&chunk);
+			// modified the list we are iterating so we need to account for that
 			i--;
 			continue;
 		}
@@ -199,6 +200,7 @@ void chunked_space::update() {
 			if (dist < 2) {
 				// pickup
 				c.objects.erase(&obj);
+				// modified the list we are iterating so we need to account for that
 				j--;
 				continue;
 			}

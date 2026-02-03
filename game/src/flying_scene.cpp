@@ -6,6 +6,8 @@
 #include "bn_sprite_items_dev8.h"
 #include "bn_sprite_items_ship.h"
 
+#include "bn_music_items.h"
+
 namespace game {
 
 flying_scene::flying_scene(game_state &state) :
@@ -17,6 +19,8 @@ flying_scene::flying_scene(game_state &state) :
 	_ship_sprite.set_camera(_camera);
 	_ship_sprite.set_bg_priority(0);
 	_ship_sprite.set_position(_space.spawn_point());
+
+	// bn::music_items::milkypack01.play();
 }
 
 flying_scene::~flying_scene() {
