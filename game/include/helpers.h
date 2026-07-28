@@ -1,5 +1,4 @@
-#ifndef HELPERS_H
-#define HELPERS_H
+#pragma once
 
 #include "bn_color.h"
 #include "bn_fixed.h"
@@ -23,6 +22,7 @@ public:
 	static inline const bn::fixed remap_fixed(bn::fixed x, bn::fixed in_start, bn::fixed in_end, bn::fixed out_start, bn::fixed out_end) {
 		return bn::clamp(out_start + ((x - in_start) * (out_end - out_start)) / (in_end - in_start), bn::min(out_start, out_end), bn::max(out_start, out_end));
 	}
+
 	static inline int lerp_int(int a, int b, bn::fixed t) {
 		return int(a + (bn::fixed(b - a) * t));
 	}
@@ -144,4 +144,3 @@ public:
 	}
 };
 } //namespace game
-#endif

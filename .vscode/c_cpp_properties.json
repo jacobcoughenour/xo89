@@ -10,7 +10,7 @@
 				"${workspaceFolder}/game/include",
 				"${workspaceFolder}/../butano/butano/include",
 				"/opt/devkitPro/devkitARM/arm-none-eabi/include",
-				"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+				"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include"
 			],
 			"defines": [],
 			"intelliSenseMode": "clang-x64",
@@ -23,7 +23,7 @@
 					"${workspaceFolder}/game/include",
 					"${workspaceFolder}/../butano/butano/include",
 					"/opt/devkitPro/devkitARM/arm-none-eabi/include",
-					"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+					"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include"
 				],
 				"limitSymbolsToIncludedHeaders": true,
 				"databaseFilename": ""
@@ -42,7 +42,7 @@
 				"/usr/local/include",
 				"${workspaceFolder}/game/include",
 				"/opt/devkitpro/devkitARM/arm-none-eabi/include",
-				"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include",
+				"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include",
 				"${workspaceFolder}/butano/butano/include",
 				"${workspaceFolder}/game/build"
 			],
@@ -54,7 +54,7 @@
 					"/usr/local/include",
 					"${workspaceFolder}/game/include",
 					"/opt/devkitpro/devkitARM/arm-none-eabi/include",
-					"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include",
+					"/opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include",
 					"${workspaceFolder}/butano/butano/include",
 					"${workspaceFolder}/game/build"
 				],
@@ -72,7 +72,7 @@
 				"${workspaceFolder}/game/include",
 				"${workspaceFolder}/../butano/butano/include",
 				"C:/devkitPro/devkitARM/arm-none-eabi/include",
-				"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+				"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include"
 			],
 			"defines": [
 				"_DEBUG",
@@ -89,7 +89,7 @@
 					"${workspaceFolder}/game/include",
 					"${workspaceFolder}/../butano/butano/include",
 					"C:/devkitPro/devkitARM/arm-none-eabi/include",
-					"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/15.1.0/include"
+					"C:/devkitPro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include"
 				],
 				"limitSymbolsToIncludedHeaders": true,
 				"databaseFilename": ""

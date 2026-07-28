@@ -1,12 +1,39 @@
 #include "chunked_space.h"
 
+#include "stb_perlin.h"
+
 namespace game {
+
+inline bn::point _tile_index_to_pos(int p_index, int p_columns) {
+	return bn::point(p_index % p_columns, p_index / p_columns);
+}
+
+inline int _tile_pos_to_index(int p_x, int p_y, int p_columns) {
+	return p_x + p_y * p_columns;
+}
+
+inline int _relative_tile_index(int p_from_index, int p_x, int p_y, int p_tileset_columns) {
+	return p_from_index + p_x + p_y * p_tileset_columns;
+}
+
+int _get_marching_tile_index(
+		int p_starting, // the top left index
+		unsigned char p_neighbor_flags) {
+	// need to shave off the first zeros
+	auto f = p_neighbor_flags & 0b00001111;
+
+	auto relative_index = _mask_to_tileset_index[f];
+	auto relative_pos = _tile_index_to_pos(relative_index, 4);
+
+	return _relative_tile_index(p_starting, relative_pos.x(), relative_pos.y(), chunked_space::TILESET_COLUMNS_X16);
+}
 
 chunked_space::chunked_space(bn::camera_ptr camera) :
 		_camera(camera),
 		_unloaded_chunks(),
 		_loaded_chunks(),
-		_rng() {
+		_rng(),
+		_tilemap_item(_tilemap_cells[0], bn::size(TILEMAP_CELLS_SIZE, TILEMAP_CELLS_SIZE)) {
 	for (int i = 0; i < MAX_CHUNKS; i++) {
 		_unloaded_chunks.push_back(unloaded_chunk{
 				.counts = {
@@ -19,6 +46,37 @@ chunked_space::chunked_space(bn::camera_ptr camera) :
 				} });
 	}
 
+	// setup tilemap
+
+	bn::bg_tiles::set_allow_offset(false);
+
+	_tilemap_bg_item = bn::regular_bg_item(
+			bn::regular_bg_tiles_items::tiles,
+			bn::bg_palette_items::palette,
+			this->_tilemap_item);
+	_tilemap_bg = _tilemap_bg_item->create_bg(0, 0);
+
+	bn::bg_tiles::set_allow_offset(true);
+
+	_tilemap_bg->set_camera(_camera);
+
+	// generate tiles
+	for (int y = 0; y < SPACE_TILE_WIDTH; y++) {
+		for (int x = 0; x < SPACE_TILE_WIDTH; x++) {
+			auto sample = stb_perlin_noise3(bn::fixed(x) / bn::fixed(12), bn::fixed(y) / bn::fixed(12), 0, SPACE_TILE_WIDTH / 8, SPACE_TILE_WIDTH, 1);
+
+			unsigned char tile_id = 0;
+			if (sample > bn::fixed(-0.08)) {
+				tile_id = 1;
+			}
+			if (sample > bn::fixed(-0.04)) {
+				tile_id = 2;
+			}
+
+			_tile_cells[_tile_pos_to_index(x, y, SPACE_TILE_WIDTH)] = tile_id;
+		}
+	}
+
 	BN_ASSERT(_chunk_index_to_world_pos(0) == bn::point(0, 0));
 	BN_ASSERT(_point_to_chunk_pos(bn::point(0, 0)) == bn::point(0, 0));
 	BN_ASSERT(_point_to_chunk_pos(bn::point(CHUNK_SIZE, 0)) == bn::point(1, 0));
@@ -27,10 +85,53 @@ chunked_space::chunked_space(bn::camera_ptr camera) :
 	BN_ASSERT(!_is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
 
 	BN_ASSERT(_is_chunk_in_view(bn::point(0, 0), bn::point(0, 0)));
-	// todo more tests
+
+	BN_ASSERT(_relative_tile_index(1, 2, 2, 16) == 35);
+
+	_update_tilemap();
 }
 
 chunked_space::~chunked_space() {
+}
+
+void chunked_space::_set_tile(int p_x, int p_y, int p_tile_id) {
+	bn::regular_bg_map_cell &top_left = _tilemap_cells[_tilemap_item.cell_index(p_x * 2, p_y * 2)];
+	bn::regular_bg_map_cell &top_right = _tilemap_cells[_tilemap_item.cell_index(p_x * 2 + 1, p_y * 2)];
+	bn::regular_bg_map_cell &bottom_left = _tilemap_cells[_tilemap_item.cell_index(p_x * 2, p_y * 2 + 1)];
+	bn::regular_bg_map_cell &bottom_right = _tilemap_cells[_tilemap_item.cell_index(p_x * 2 + 1, p_y * 2 + 1)];
+
+	bn::regular_bg_map_cell_info top_left_info(top_left);
+	bn::regular_bg_map_cell_info top_right_info(top_right);
+	bn::regular_bg_map_cell_info bottom_left_info(bottom_left);
+	bn::regular_bg_map_cell_info bottom_right_info(bottom_right);
+
+	// how many 16x16 columns are there in the original asset
+	const auto source_tileset_columns = 16;
+	// gba only supports 8x8 internally
+	const auto target_tileset_columns = source_tileset_columns * 2;
+
+	const auto source_tile_pos = _tile_index_to_pos(p_tile_id, source_tileset_columns);
+
+	// convert to 8x8 index meta tiles
+	const auto target_top_left_index = _tile_pos_to_index(source_tile_pos.x() * 2, source_tile_pos.y() * 2, target_tileset_columns);
+	const auto target_top_right_index = target_top_left_index + 1;
+	const auto target_bottom_left_index = target_top_left_index + target_tileset_columns;
+	const auto target_bottom_right_index = target_bottom_left_index + 1;
+
+	top_left_info.set_tile_index(target_top_left_index);
+	top_right_info.set_tile_index(target_top_right_index);
+	bottom_left_info.set_tile_index(target_bottom_left_index);
+	bottom_right_info.set_tile_index(target_bottom_right_index);
+
+	top_left_info.set_palette_id(0);
+	top_right_info.set_palette_id(0);
+	bottom_left_info.set_palette_id(0);
+	bottom_right_info.set_palette_id(0);
+
+	top_left = top_left_info.cell();
+	top_right = top_right_info.cell();
+	bottom_left = bottom_left_info.cell();
+	bottom_right = bottom_right_info.cell();
 }
 
 bn::fixed_point chunked_space::spawn_point() {
@@ -53,6 +154,12 @@ chunk_point chunked_space::_point_to_chunk_pos(bn::fixed_point point) {
 	return chunk_point(
 			point.x().floor_integer() / CHUNK_SIZE,
 			point.y().floor_integer() / CHUNK_SIZE);
+}
+
+bn::point chunked_space::_point_to_tilemap_pos(bn::fixed_point point) {
+	return bn::point(
+			point.x().floor_integer() / TILEMAP_LOAD_STRIDE_PX,
+			point.y().floor_integer() / TILEMAP_LOAD_STRIDE_PX);
 }
 
 bool chunked_space::_is_chunk_in_view(bn::fixed_point camera_pos, chunk_point chunk_pos) {
@@ -100,8 +207,73 @@ bool chunked_space::_is_point_in_view(bn::fixed_point camera_pos, bn::fixed_poin
 	return true;
 }
 
+inline unsigned char chunked_space::_get_tile_at(int p_tile_x, int p_tile_y) {
+	int index = _tile_pos_to_index(
+			p_tile_x,
+			p_tile_y,
+			chunked_space::SPACE_TILE_WIDTH);
+
+	if (index < 0 || index >= MAX_TILES) {
+		return 35; // bedrock borders
+	}
+	return _tile_cells[index];
+}
+
+void chunked_space::_update_tilemap() {
+	auto top_left_world_point = _tilemap_loaded_point * TILEMAP_LOAD_STRIDE_PX;
+	_tilemap_bg->set_position(top_left_world_point + bn::point(TILEMAP_LOAD_STRIDE_PX / 2, TILEMAP_LOAD_STRIDE_PX / 2));
+
+	auto top_left_tile_point = top_left_world_point / 16;
+
+	// populate current tilemap
+	for (int y = 0; y < TILEMAP_SIZE; y++) {
+		for (int x = 0; x < TILEMAP_SIZE; x++) {
+			auto px = x + top_left_tile_point.x();
+			auto py = y + top_left_tile_point.y();
+
+			auto tile = _get_tile_at(px, py);
+
+			if (tile == 0) {
+				_set_tile(x, y, 0);
+				continue;
+			}
+
+			auto top = _get_tile_at(px, py - 1);
+			auto right = _get_tile_at(px + 1, py);
+			auto bottom = _get_tile_at(px, py + 1);
+			auto left = _get_tile_at(px - 1, py);
+
+			unsigned char flag = 0;
+			if (top != 0) {
+				flag |= marching_tile_flags::TOP;
+			}
+			if (right != 0) {
+				flag |= marching_tile_flags::RIGHT;
+			}
+			if (bottom != 0) {
+				flag |= marching_tile_flags::BOTTOM;
+			}
+			if (left != 0) {
+				flag |= marching_tile_flags::LEFT;
+			}
+
+			_set_tile(x, y, _get_marching_tile_index(1, flag));
+		}
+	}
+
+	bn::regular_bg_map_ptr map = _tilemap_bg->map();
+	map.reload_cells_ref();
+}
+
 void chunked_space::update() {
 	bn::fixed_point ship_pos = _camera.position();
+
+	bn::point tilemap_pos = _point_to_tilemap_pos(ship_pos);
+
+	if (tilemap_pos != _tilemap_loaded_point) {
+		_tilemap_loaded_point = tilemap_pos;
+		_update_tilemap();
+	}
 
 	chunk_point current_chunk_pos = _point_to_chunk_pos(ship_pos);
 

@@ -1,5 +1,4 @@
-#ifndef TESTS_H
-#define TESTS_H
+#pragma once
 
 #include "bn_assert.h"
 #include "helpers.h"
@@ -37,4 +36,3 @@ private:
 	}
 };
 } //namespace game
-#endif

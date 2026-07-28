@@ -1,5 +1,4 @@
-#ifndef GAME_STATE_H
-#define GAME_STATE_H
+#pragma once
 
 #include "chunked_space.h"
 
@@ -29,4 +28,3 @@ public:
 	void update();
 };
 } //namespace game
-#endif

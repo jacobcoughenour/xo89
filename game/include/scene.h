@@ -1,5 +1,4 @@
-#ifndef SCENE_H
-#define SCENE_H
+#pragma once
 
 #include "bn_optional.h"
 
@@ -18,4 +17,3 @@ public:
 };
 
 } //namespace game
-#endif

@@ -1,5 +1,4 @@
-#ifndef FLYING_SCENE_H
-#define FLYING_SCENE_H
+#pragma once
 
 #include "chunked_space.h"
 #include "game_state.h"
@@ -31,6 +30,9 @@ private:
 
 	bn::camera_ptr _camera;
 	bn::seed_random _rng;
+	int _frame;
+
+	bn::regular_bg_ptr _bg_bg;
 
 	chunked_space _space;
 
@@ -39,10 +41,11 @@ private:
 	bn::fixed_point _ship_velocity;
 	bn::fixed _ship_rotation;
 
+	bn::affine_bg_ptr _ship_laser;
+
 	// bn::vector<bn::sprite_ptr, 32> _floating_spites;
 	// bn::vector<bn::sprite_ptr, 8> _projectiles;
 
 	bn::vector<bn::sprite_ptr, 16> _text_sprites;
 };
 } //namespace game
-#endif
