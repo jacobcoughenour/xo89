@@ -54,9 +54,25 @@ bn::optional<scene_type> flying_scene::update() {
 
 	_ship_velocity *= bn::fixed(0.99);
 
-	bn::fixed_point pos = _ship_sprite.position();
-	pos += _ship_velocity;
-	_ship_sprite.set_position(pos);
+	bn::fixed_point desired_pos = _ship_sprite.position();
+	desired_pos += _ship_velocity;
+
+	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	auto tile_pos = _space.space_point_to_tile_point(desired_pos);
+	auto is_solid = _space.is_solid_tile(tile_pos);
+
+	_text_sprites.clear();
+	bn::string<36> text;
+	bn::ostringstream text_stream(text);
+	text_stream.append(is_solid ? "TRUE" : "FALSE");
+	_state.small_fixed_text_generator.generate(16, 0, text, _text_sprites);
+	text.clear();
+	text_stream.append(tile_pos.x());
+	text_stream.append("  ");
+	text_stream.append(tile_pos.y());
+	_state.small_fixed_text_generator.generate(16, 16, text, _text_sprites);
+	_ship_sprite.set_position(desired_pos);
 
 	_camera.set_position(_ship_sprite.position());
 
@@ -77,6 +93,8 @@ bn::optional<scene_type> flying_scene::update() {
 
 	_space.update();
 
+	// update_text();
+
 	_frame++;
 
 	return result;
@@ -88,7 +106,9 @@ void flying_scene::update_text() {
 	_text_sprites.clear();
 	bn::string<36> text;
 	bn::ostringstream text_stream(text);
+
 	text_stream.append(_ship_velocity.y());
+
 	_state.small_fixed_text_generator.generate(16, 0, text, _text_sprites);
 }
 

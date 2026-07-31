@@ -63,19 +63,25 @@ chunked_space::chunked_space(bn::camera_ptr camera) :
 	// generate tiles
 	for (int y = 0; y < SPACE_TILE_WIDTH; y++) {
 		for (int x = 0; x < SPACE_TILE_WIDTH; x++) {
-			auto sample = stb_perlin_noise3(bn::fixed(x) / bn::fixed(12), bn::fixed(y) / bn::fixed(12), 0, SPACE_TILE_WIDTH / 8, SPACE_TILE_WIDTH, 1);
+			// auto sample = stb_perlin_noise3(bn::fixed(x) / bn::fixed(12), bn::fixed(y) / bn::fixed(12), 0, SPACE_TILE_WIDTH / 8, SPACE_TILE_WIDTH, 1);
 
 			unsigned char tile_id = 0;
-			if (sample > bn::fixed(-0.08)) {
+			// if (sample > bn::fixed(-0.08)) {
+			// 	tile_id = 1;
+			// }
+			// if (sample > bn::fixed(-0.04)) {
+			// 	tile_id = 2;
+			// }
+
+			if (x % 16 == 0 && y % 16 == 0) {
 				tile_id = 1;
-			}
-			if (sample > bn::fixed(-0.04)) {
-				tile_id = 2;
 			}
 
 			_tile_cells[_tile_pos_to_index(x, y, SPACE_TILE_WIDTH)] = tile_id;
 		}
 	}
+
+	_tile_cells[_tile_pos_to_index(128, 128, SPACE_TILE_WIDTH)] = 1;
 
 	BN_ASSERT(_chunk_index_to_world_pos(0) == bn::point(0, 0));
 	BN_ASSERT(_point_to_chunk_pos(bn::point(0, 0)) == bn::point(0, 0));
@@ -136,6 +142,17 @@ void chunked_space::_set_tile(int p_x, int p_y, int p_tile_id) {
 
 bn::fixed_point chunked_space::spawn_point() {
 	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2, SPACE_SIZE * CHUNK_SIZE / 2);
+}
+
+bn::point chunked_space::space_point_to_tile_point(bn::fixed_point p_pos) {
+	return bn::point(
+			p_pos.x().floor_integer() / TILE_SIZE_PX,
+			p_pos.y().floor_integer() / TILE_SIZE_PX);
+}
+
+bool chunked_space::is_solid_tile(bn::point p_pos) {
+	auto c = _get_tile_at(p_pos.x(), p_pos.y());
+	return c != 0;
 }
 
 bn::point chunked_space::_chunk_index_to_world_pos(int i) {
@@ -221,7 +238,9 @@ inline unsigned char chunked_space::_get_tile_at(int p_tile_x, int p_tile_y) {
 
 void chunked_space::_update_tilemap() {
 	auto top_left_world_point = _tilemap_loaded_point * TILEMAP_LOAD_STRIDE_PX;
-	_tilemap_bg->set_position(top_left_world_point + bn::point(TILEMAP_LOAD_STRIDE_PX / 2, TILEMAP_LOAD_STRIDE_PX / 2));
+	top_left_world_point += bn::point(TILEMAP_CELLS_SIZE / 4, TILEMAP_SIZE / 4);
+
+	_tilemap_bg->set_position(top_left_world_point + bn::point(TILEMAP_CELLS_SIZE / 4, TILEMAP_CELLS_SIZE / 4));
 
 	auto top_left_tile_point = top_left_world_point / 16;
 

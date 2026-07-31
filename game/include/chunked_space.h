@@ -101,7 +101,8 @@ public:
 	static const int MAX_VISIBLE_OBJS = 64;
 	static const int MAX_LOADED_CHUNKS = 9;
 
-	static const int CHUNK_TILE_WIDTH = CHUNK_SIZE / 16;
+	static const int TILE_SIZE_PX = 16;
+	static const int CHUNK_TILE_WIDTH = CHUNK_SIZE / TILE_SIZE_PX;
 	static const int SPACE_TILE_WIDTH = SPACE_SIZE * CHUNK_TILE_WIDTH;
 	static const int TILES_PER_CHUNK = CHUNK_TILE_WIDTH * CHUNK_TILE_WIDTH;
 	static const int MAX_TILES = TILES_PER_CHUNK * MAX_CHUNKS;
@@ -112,7 +113,7 @@ public:
 	static const int TILEMAP_MAX_CELLS = TILEMAP_CELLS_SIZE * TILEMAP_CELLS_SIZE;
 	// how many pixels does the camera travel to cause the tilemap to reload
 
-	static const int TILEMAP_LOAD_STRIDE_PX = 16;
+	static const int TILEMAP_LOAD_STRIDE_PX = TILE_SIZE_PX;
 
 	static const int TILESET_COLUMNS_X16 = 16;
 	static const int TILESET_COLUMNS_X8 = TILESET_COLUMNS_X16 * TILESET_COLUMNS_X16;
@@ -150,6 +151,9 @@ public:
 	void update();
 
 	bn::fixed_point spawn_point();
+
+	bn::point space_point_to_tile_point(bn::fixed_point p_pos);
+	bool is_solid_tile(bn::point p_pos);
 
 private:
 	alignas(unsigned char) volatile unsigned char _tile_cells[MAX_TILES];
