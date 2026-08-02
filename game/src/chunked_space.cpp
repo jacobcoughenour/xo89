@@ -290,14 +290,13 @@ void chunked_space::spawn_floating_object(obj_type p_type, bn::fixed_point p_pos
 	// need to create sprite?
 }
 
-bn::optional<chunked_space::raycast_hit> chunked_space::raycast(bn::fixed_point p_origin, bn::fixed_point p_dir) {
+bn::optional<chunked_space::raycast_hit> chunked_space::raycast(bn::fixed_point p_origin, bn::fixed_point p_dir, bn::fixed p_max_distance) {
 	bn::optional<chunked_space::raycast_hit> hit;
 
-	// todo https://joelschumacher.de/posts/ray-casting-in-2d-grids
-
 	auto step = helpers::set_length(p_dir, 8.0);
+	auto steps = p_max_distance / 8.0;
 
-	for (size_t i = 0; i < 10; i++) {
+	for (bn::fixed i = 0; i < steps; i += 1) {
 		auto tile_pos = space_point_to_tile_point(p_origin);
 		if (is_solid_tile(tile_pos)) {
 			hit = raycast_hit{

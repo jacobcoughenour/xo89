@@ -49,7 +49,9 @@ private:
 
 	bn::affine_bg_ptr _ship_laser;
 
-	bn::sprite_ptr _test_sprite;
+	bn::sprite_ptr _breaking_sprite;
+	bn::sprite_ptr _crosshair_sprite;
+	int _crosshair_frame;
 
 	// bn::vector<bn::sprite_ptr, 32> _floating_spites;
 	// bn::vector<bn::sprite_ptr, 8> _projectiles;

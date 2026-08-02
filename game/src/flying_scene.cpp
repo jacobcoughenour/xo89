@@ -3,6 +3,8 @@
 // assets
 #include "bn_affine_bg_items_laser.h"
 #include "bn_regular_bg_items_green_bg.h"
+#include "bn_sprite_items_breaking.h"
+#include "bn_sprite_items_crosshair.h"
 #include "bn_sprite_items_dev16.h"
 #include "bn_sprite_items_dev32.h"
 #include "bn_sprite_items_dev8.h"
@@ -20,7 +22,8 @@ flying_scene::flying_scene(game_state &state) :
 		_bg_bg(bn::regular_bg_items::green_bg.create_bg()),
 		_ship_sprite(bn::sprite_items::ship.create_sprite()),
 		_ship_laser(bn::affine_bg_items::laser.create_bg()),
-		_test_sprite(bn::sprite_items::dev16.create_sprite()) {
+		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
+		_crosshair_sprite(bn::sprite_items::crosshair.create_sprite()) {
 	bn::bg_palettes::set_transparent_color(bn::color(2, 3, 4));
 
 	_bg_bg.set_visible(false);
@@ -38,8 +41,8 @@ flying_scene::flying_scene(game_state &state) :
 	_ship_sprite.set_bg_priority(0);
 	_ship_sprite.set_position(_ship_hitbox.position());
 
-	_test_sprite.set_camera(_camera);
-	_test_sprite.set_position(bn::fixed_point(128 * 16 + 8, 128 * 16 + 8));
+	_breaking_sprite.set_camera(_camera);
+	_crosshair_sprite.set_camera(_camera);
 
 	_ship_laser.set_camera(_camera);
 	_ship_laser.set_wrapping_enabled(false);
@@ -120,29 +123,30 @@ bn::optional<scene_type> flying_scene::update() {
 	_ship_sprite.set_position(_ship_hitbox.position());
 	_ship_laser.set_position(_ship_hitbox.position());
 
-	if (bn::keypad::b_held()) {
-		auto laser_hit = _space.raycast(_ship_hitbox.center(), -helpers::angle_to_dir(-_ship_rotation + 8));
+	const bn::fixed max_dist = 64;
 
-		if (laser_hit.has_value()) {
+	auto targetting_hit = _space.raycast(_ship_hitbox.center(), -helpers::angle_to_dir(-_ship_rotation + 8), max_dist);
+	auto target_dir = -helpers::set_length(helpers::angle_to_dir(-_ship_rotation), max_dist - 4.0);
+
+	if (targetting_hit.has_value()) {
+		auto dist = helpers::distance(_ship_hitbox.center(), targetting_hit.value().intersection_pos);
+		target_dir = targetting_hit.value().intersection_pos - _ship_hitbox.position();
+
+		auto new_tile = targetting_hit.value().tile_pos;
+		if (new_tile != _laser_target_cell) {
+			_mining_timer = 0;
+			_breaking_sprite.set_position(targetting_hit.value().intersection_pos);
+		}
+		_laser_target_cell = new_tile;
+
+		if (bn::keypad::b_held()) {
 			_ship_laser.set_visible(true);
-
-			auto dir = laser_hit.value().intersection_pos - _ship_hitbox.position();
-
-			_ship_laser.set_rotation_angle(bn::degrees_atan2(dir.x().integer(), dir.y().integer()) + 180);
+			_ship_laser.set_rotation_angle(bn::degrees_atan2(target_dir.x().integer(), target_dir.y().integer()) + 180);
 
 			// flicker
 			_ship_laser.set_horizontal_scale(_frame % 4 < 2 ? 0.05 : 0.06);
 
-			auto dist = helpers::distance(_ship_hitbox.center(), laser_hit.value().intersection_pos);
-
-			auto new_tile = laser_hit.value().tile_pos;
-			if (new_tile != _laser_target_cell) {
-				_mining_timer = 0;
-			}
-			_laser_target_cell = new_tile;
-
 			if (dist > 1.0) {
-				// todo why is this broken?
 				_ship_laser.set_vertical_scale(dist / 128.0);
 			} else {
 				_ship_laser.set_visible(false);
@@ -150,24 +154,42 @@ bn::optional<scene_type> flying_scene::update() {
 
 			_mining_timer++;
 
-			if (_mining_timer > 30) {
+			if (_mining_timer >= 30) {
 				// mine the cell
-
 				_space.mine_tile(_laser_target_cell);
-
 				_mining_timer = 0;
+			} else {
+				_breaking_sprite.set_tiles(bn::sprite_items::breaking.tiles_item()
+								.create_tiles(_mining_timer / (30 / 4) % 4));
 			}
 		} else {
 			_ship_laser.set_visible(false);
 			_ship_laser.set_vertical_scale(1.4);
 			_mining_timer = 0;
 		}
-
 	} else {
 		_ship_laser.set_visible(false);
 		_mining_timer = 0;
 	}
 	_bg_bg.set_position(-_camera.position() / 2);
+
+	auto crosshair_target_pos = _ship_hitbox.center() + target_dir;
+	if (helpers::distance(crosshair_target_pos, _crosshair_sprite.position()) > 1.0) {
+		_crosshair_sprite.set_position(helpers::lerp_fixed_point(_crosshair_sprite.position(), crosshair_target_pos, 0.55));
+	} else {
+		_crosshair_sprite.set_position(crosshair_target_pos);
+	}
+
+	if (targetting_hit.has_value()) {
+		if (_crosshair_frame < 4) {
+			_crosshair_frame++;
+		}
+	} else if (_crosshair_frame > 0) {
+		_crosshair_frame--;
+	}
+	_crosshair_sprite.set_tiles(bn::sprite_items::crosshair.tiles_item().create_tiles(_crosshair_frame / 2));
+
+	_breaking_sprite.set_visible(_mining_timer > 0);
 
 	// keep camera on the ship
 	_camera.set_position(_ship_hitbox.position());

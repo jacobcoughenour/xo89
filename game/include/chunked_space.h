@@ -141,7 +141,7 @@ public:
 	bool is_solid_tile(bn::point p_pos);
 	bool can_mine_tile(bn::point p_pos);
 
-	bn::optional<raycast_hit> raycast(bn::fixed_point p_origin, bn::fixed_point p_dir);
+	bn::optional<raycast_hit> raycast(bn::fixed_point p_origin, bn::fixed_point p_dir, bn::fixed p_max_distance);
 
 	void mine_tile(bn::point p_tile_point);
 
