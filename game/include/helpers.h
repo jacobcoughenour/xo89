@@ -19,6 +19,10 @@ public:
 		return a + ((b - a) * t);
 	}
 
+	static inline const bn::fixed_point lerp_fixed_point(bn::fixed_point a, bn::fixed_point b, bn::fixed t) {
+		return a + ((b - a) * t);
+	}
+
 	static inline const bn::fixed remap_fixed(bn::fixed x, bn::fixed in_start, bn::fixed in_end, bn::fixed out_start, bn::fixed out_end) {
 		return bn::clamp(out_start + ((x - in_start) * (out_end - out_start)) / (in_end - in_start), bn::min(out_start, out_end), bn::max(out_start, out_end));
 	}
@@ -59,9 +63,26 @@ public:
 		return value;
 	}
 
+	static inline const int posmod(int x, int y) {
+		int value = x % y;
+		if (((value < 0) && (y > 0)) || ((value > 0) && (y < 0))) {
+			value += y;
+		}
+		return value;
+	}
+
 	static inline const bn::fixed_point rad_to_dir(bn::fixed rad) {
 		rad /= PI_2;
 		return bn::fixed_point(bn::sin(rad), bn::cos(rad));
+	}
+
+	static inline const bn::fixed_point angle_to_dir(bn::fixed angle) {
+		const auto p = bn::degrees_lut_sin_and_cos_safe(angle);
+		return bn::fixed_point(p.first, p.second);
+	}
+
+	static inline const bn::fixed dir_to_angle_deg(bn::point point) {
+		return bn::degrees_atan2(point.x(), point.y());
 	}
 
 	static constexpr double PI = 3.1415926535897932384626433832795;
@@ -81,6 +102,10 @@ public:
 
 	static inline bn::fixed distance(bn::fixed_point a, bn::fixed_point b) {
 		return point_length(a - b);
+	}
+
+	static inline bn::fixed_point set_length(bn::fixed_point a, bn::fixed length) {
+		return normalize_point(a) * length;
 	}
 
 	// bounding box test between two points.

@@ -8,6 +8,7 @@
 #include "bn_affine_bg_ptr.h"
 #include "bn_cameras.h"
 #include "bn_core.h"
+#include "bn_fixed_rect.h"
 #include "bn_keypad.h"
 #include "bn_math.h"
 #include "bn_random.h"
@@ -32,6 +33,11 @@ private:
 	bn::seed_random _rng;
 	int _frame;
 
+	bn::point _laser_target_cell;
+	int _mining_timer;
+
+	bn::fixed_rect _ship_hitbox;
+
 	bn::regular_bg_ptr _bg_bg;
 
 	chunked_space _space;
@@ -42,6 +48,8 @@ private:
 	bn::fixed _ship_rotation;
 
 	bn::affine_bg_ptr _ship_laser;
+
+	bn::sprite_ptr _test_sprite;
 
 	// bn::vector<bn::sprite_ptr, 32> _floating_spites;
 	// bn::vector<bn::sprite_ptr, 8> _projectiles;
