@@ -55,7 +55,7 @@ public:
 		return value;
 	}
 
-	static inline const bn::fixed fposmod1(bn::fixed x) {
+	static inline bn::fixed fposmod1(bn::fixed x) {
 		bn::fixed value = fmod1(x);
 		if (value < 0) {
 			value += 1;
@@ -63,7 +63,7 @@ public:
 		return value;
 	}
 
-	static inline const int posmod(int x, int y) {
+	static inline int posmod(int x, int y) {
 		int value = x % y;
 		if (((value < 0) && (y > 0)) || ((value > 0) && (y < 0))) {
 			value += y;

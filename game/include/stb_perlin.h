@@ -233,7 +233,7 @@ bn::fixed stb_perlin_ridge_noise3(bn::fixed x, bn::fixed y, bn::fixed z,bn::fixe
    bn::fixed sum = 0.0;
 
    for (i = 0; i < octaves; i++) {
-      bn::fixed r = (bn::fixed)(stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
+      bn::fixed r = stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap);
       r = r<0 ? -r : r; // fabs()
       r = offset - r;
       r = r*r;

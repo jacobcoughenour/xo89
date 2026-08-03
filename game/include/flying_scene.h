@@ -45,7 +45,7 @@ private:
 	// do we want to combine these into a "transform"
 	bn::sprite_ptr _ship_sprite;
 	bn::fixed_point _ship_velocity;
-	bn::fixed _ship_rotation;
+	bn::fixed _ship_rotation = 180;
 
 	bn::affine_bg_ptr _ship_laser;
 

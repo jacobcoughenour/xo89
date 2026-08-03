@@ -17,11 +17,11 @@ inline int _relative_tile_index(int p_from_index, int p_x, int p_y, int p_tilese
 }
 
 chunked_space::chunked_space(bn::camera_ptr camera) :
+		_tilemap_item(_tilemap_cells[0], bn::size(TILEMAP_CELLS_SIZE, TILEMAP_CELLS_SIZE)),
 		_camera(camera),
-		_unloaded_chunks(),
-		_loaded_chunks(),
 		_rng(),
-		_tilemap_item(_tilemap_cells[0], bn::size(TILEMAP_CELLS_SIZE, TILEMAP_CELLS_SIZE)) {
+		_objects(),
+		_obj_sprites() {
 	// setup tilemap
 
 	bn::bg_tiles::set_allow_offset(false);
@@ -36,14 +36,8 @@ chunked_space::chunked_space(bn::camera_ptr camera) :
 
 	_tilemap_bg->set_camera(_camera);
 
-	BN_ASSERT(_chunk_index_to_world_pos(0) == bn::point(0, 0));
-	BN_ASSERT(_point_to_chunk_pos(bn::point(0, 0)) == bn::point(0, 0));
-	BN_ASSERT(_point_to_chunk_pos(bn::point(CHUNK_SIZE, 0)) == bn::point(1, 0));
-
 	BN_ASSERT(_is_point_in_view(bn::point(0, 0), bn::point(-120, 0), 0));
 	BN_ASSERT(!_is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
-
-	BN_ASSERT(_is_chunk_in_view(bn::point(0, 0), bn::point(0, 0)));
 
 	BN_ASSERT(_relative_tile_index(1, 2, 2, 16) == 35);
 }
@@ -52,12 +46,17 @@ chunked_space::~chunked_space() {
 }
 
 void chunked_space::generate_next_chunk() {
-	BN_ASSERT(chunks_generated < MAX_CHUNKS);
+	BN_ASSERT(_chunks_generated < MAX_CHUNKS);
 
-	int start_x = (chunks_generated % SPACE_SIZE) * CHUNK_TILE_WIDTH;
-	int start_y = (chunks_generated / SPACE_SIZE) * CHUNK_TILE_WIDTH;
+	int start_x = (_chunks_generated % SPACE_SIZE) * CHUNK_TILE_WIDTH;
+	int start_y = (_chunks_generated / SPACE_SIZE) * CHUNK_TILE_WIDTH;
 	int to_x = start_x + CHUNK_TILE_WIDTH;
 	int to_y = start_y + CHUNK_TILE_WIDTH;
+
+	auto spawn_point = this->spawn_point();
+	spawn_point.set_y(0);
+	spawn_point.set_x(spawn_point.x().integer() / 16);
+	auto spawn_area = 4;
 
 	// generate tiles
 	for (int y = start_y; y < to_y; y++) {
@@ -66,7 +65,10 @@ void chunked_space::generate_next_chunk() {
 
 			auto index = _tile_pos_to_index(x, y, SPACE_TILE_WIDTH);
 
-			if (x > 120 && x < 136 && y > 120 && y < 136) {
+			if (x > spawn_point.x() - spawn_area //
+					&& x < spawn_point.x() + spawn_area //
+					&& y > spawn_point.y() - spawn_area //
+					&& y < spawn_point.y() + spawn_area) {
 				data.material = tile_material::AIR;
 			} else {
 				auto sample = stb_perlin_noise3(bn::fixed(x) / bn::fixed(8), bn::fixed(y) / bn::fixed(8), 0, SPACE_TILE_WIDTH / 8, SPACE_TILE_WIDTH, 1);
@@ -91,16 +93,15 @@ void chunked_space::generate_next_chunk() {
 		}
 	}
 
-	// chunks_generated = MAX_CHUNKS;
-	chunks_generated++;
+	_chunks_generated++;
 }
 
 int chunked_space::generated_chunks_count() {
-	return chunks_generated;
+	return _chunks_generated;
 }
 
 bool chunked_space::is_generated() {
-	return chunks_generated == MAX_CHUNKS;
+	return _chunks_generated == MAX_CHUNKS;
 }
 
 inline bool _has_flags(unsigned short value, unsigned short mask) {
@@ -202,7 +203,7 @@ void chunked_space::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mas
 				corner_flip_h[i] = _rng.get_bool();
 			}
 			if (s == 0) {
-				auto rand_offset = _rng.get_int(p_material == tile_material::ROCK ? 2 : 3);
+				auto rand_offset = _rng.get_int(p_material == tile_material::ROCK || p_material == tile_material::BEDROCK ? 2 : 3);
 				s = solid_offsets[rand_offset];
 			}
 
@@ -260,13 +261,13 @@ void chunked_space::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mas
 }
 
 bn::fixed_point chunked_space::spawn_point() {
-	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2, SPACE_SIZE * CHUNK_SIZE / 2);
+	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2 + 8, 0);
 }
 
 bn::point chunked_space::space_point_to_tile_point(bn::fixed_point p_pos) {
 	return bn::point(
-			p_pos.x().floor_integer() / TILE_SIZE_PX,
-			p_pos.y().floor_integer() / TILE_SIZE_PX);
+			(p_pos.x() < 0 ? p_pos.x().ceil_integer() : p_pos.x().floor_integer()) / TILE_SIZE_PX,
+			(p_pos.y() < 0 ? p_pos.y().ceil_integer() : p_pos.y().floor_integer()) / TILE_SIZE_PX);
 }
 
 bool chunked_space::is_solid_tile(bn::point p_pos) {
@@ -277,17 +278,29 @@ bool chunked_space::is_solid_tile(bn::point p_pos) {
 bool chunked_space::can_mine_tile(bn::point p_pos) {
 	auto c = _get_tile_at(p_pos.x(), p_pos.y());
 	// todo
-	return c.material != tile_material::AIR || c.material != tile_material::BEDROCK;
+	return c.material != tile_material::AIR && c.material != tile_material::BEDROCK;
 }
 
 void chunked_space::spawn_floating_object(obj_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
-	// get chunk it should go in
+	if (_objects.full()) {
+		// make room
+		_objects.pop_back();
+	}
 
-	// determine if loaded or unloaded chunk
+	// todo you can do better (lut?)
+	unsigned char sprite_index = static_cast<unsigned char>(p_type) + 1;
+	if (sprite_index == 1 && _rng.get_bool()) {
+		sprite_index = 0;
+	}
 
-	// add it
+	floating_object obj{
+		p_type,
+		sprite_index,
+		p_position,
+		p_velocity,
+	};
 
-	// need to create sprite?
+	_objects.push_front(obj);
 }
 
 bn::optional<chunked_space::raycast_hit> chunked_space::raycast(bn::fixed_point p_origin, bn::fixed_point p_dir, bn::fixed p_max_distance) {
@@ -354,12 +367,6 @@ void chunked_space::set_tile_material(bn::point p_tile_point, tile_material p_ti
 
 	d.material = p_tile_material;
 
-	// auto update_lighting =
-	// (d.material == tile_material::AIR) != (p_tile_material == tile_material::AIR);
-	// if (d.material == tile_material::AIR) {
-
-	// }
-
 	_tile_cells[index] = pack_tile_data(d);
 
 	_update_tilemap();
@@ -371,58 +378,31 @@ void chunked_space::mine_tile(bn::point p_tile_point) {
 	}
 
 	auto tile = get_tile(p_tile_point);
-
-	// todo spawn items
-
 	set_tile_material(p_tile_point, tile_material::AIR);
-}
 
-bn::point chunked_space::_chunk_index_to_world_pos(int i) {
-	return bn::point((i % SPACE_SIZE) * CHUNK_SIZE, (i / SPACE_SIZE) * CHUNK_SIZE);
-}
+	int drop_amount = 0;
+	obj_type drop_type = static_cast<obj_type>(static_cast<unsigned char>(tile.material) - static_cast<unsigned char>(tile_material::ROCK));
 
-bn::fixed_point chunked_space::_chunk_pos_to_world_pos(chunk_point chunk_pos) {
-	return bn::fixed_point((chunk_pos.x()) * CHUNK_SIZE, (chunk_pos.y()) * CHUNK_SIZE);
-}
+	if (drop_type == obj_type::ROCK) {
+		drop_amount = 1;
+	} else {
+		drop_amount = _rng.get_bool() ? 1 : 2;
+	}
 
-int chunked_space::_chunk_pos_to_index(int cx, int cy) {
-	return cx % SPACE_SIZE + cy * SPACE_SIZE;
-}
+	for (int i = 0; i < drop_amount; i++) {
+		bn::fixed_point position(
+				p_tile_point.x() * 16 + 2 + _rng.get_fixed() % 4,
+				p_tile_point.y() * 16 + 2 + _rng.get_fixed() % 4);
+		bn::fixed_point velocity(_rng.get_fixed() % 4 - 2, _rng.get_fixed() % 4 - 2);
 
-chunk_point chunked_space::_point_to_chunk_pos(bn::fixed_point point) {
-	return chunk_point(
-			point.x().floor_integer() / CHUNK_SIZE,
-			point.y().floor_integer() / CHUNK_SIZE);
+		spawn_floating_object(drop_type, position, velocity);
+	}
 }
 
 bn::point chunked_space::_point_to_tilemap_pos(bn::fixed_point point) {
 	return bn::point(
 			(point.x().floor_integer() + 8) / TILEMAP_LOAD_STRIDE_PX,
 			(point.y().floor_integer() + 8) / TILEMAP_LOAD_STRIDE_PX);
-}
-
-bool chunked_space::_is_chunk_in_view(bn::fixed_point camera_pos, chunk_point chunk_pos) {
-	bn::fixed left = camera_pos.x() - 120;
-	bn::fixed right = camera_pos.x() + 120;
-	bn::fixed top = camera_pos.y() - 80;
-	bn::fixed bottom = camera_pos.y() + 80;
-
-	bn::fixed_point pos = _chunk_pos_to_world_pos(chunk_pos);
-
-	if (pos.x() + CHUNK_SIZE < left) {
-		return false;
-	}
-	if (pos.x() > right) {
-		return false;
-	}
-	if (pos.y() + CHUNK_SIZE < top) {
-		return false;
-	}
-	if (pos.y() > bottom) {
-		return false;
-	}
-
-	return true;
 }
 
 bool chunked_space::_is_point_in_view(bn::fixed_point camera_pos, bn::fixed_point point, bn::fixed size) {
@@ -447,17 +427,27 @@ bool chunked_space::_is_point_in_view(bn::fixed_point camera_pos, bn::fixed_poin
 }
 
 inline tile_data chunked_space::_get_tile_at(int p_tile_x, int p_tile_y) {
-	int index = _tile_pos_to_index(
-			p_tile_x,
-			p_tile_y,
-			chunked_space::SPACE_TILE_WIDTH);
+	if (p_tile_x < 0 || p_tile_y < 0 || p_tile_x >= SPACE_TILE_WIDTH || p_tile_y >= SPACE_TILE_WIDTH) {
+		const int middle = SPACE_SIZE * CHUNK_SIZE / 2 / 16;
 
-	if (index < 0 || index >= MAX_TILES) {
+		if (p_tile_y < 0 && p_tile_x > middle - 4 && p_tile_x < middle + 4) {
+			return tile_data{
+				tile_material::AIR,
+				0
+			};
+		}
+
 		return tile_data{
 			tile_material::BEDROCK,
 			0
 		};
 	}
+
+	int index = _tile_pos_to_index(
+			p_tile_x,
+			p_tile_y,
+			chunked_space::SPACE_TILE_WIDTH);
+
 	return unpack_tile_data(_tile_cells[index]);
 }
 
@@ -541,161 +531,81 @@ void chunked_space::update() {
 		_update_tilemap();
 	}
 
-	chunk_point current_chunk_pos = _point_to_chunk_pos(camera_pos);
-
-	// loaded chunk area around the ship
-	int chunk_left = current_chunk_pos.x() - 1;
-	int chunk_right = current_chunk_pos.x() + 1;
-	int chunk_top = current_chunk_pos.y() - 1;
-	int chunk_bottom = current_chunk_pos.y() + 1;
-
-	return;
-
-	for (int i = 0; i < _loaded_chunks.size(); i++) {
-		loaded_chunk &chunk = _loaded_chunks[i];
-		if (chunk.position.x() < chunk_left || chunk.position.x() > chunk_right || chunk.position.y() < chunk_top || chunk.position.y() > chunk_bottom) {
-			int chunk_i = _chunk_pos_to_index(chunk.position.x(), chunk.position.y());
-
-			// unload the chunk
-
-			// count the current resources in the chunk to serialize them
-			auto unloaded = unloaded_chunk{
-				// .counts = { 0, 0, 0, 0, 0, 0 }
-			};
-			// for (int j = 0; j < chunk.objects.size(); j++) {
-			// 	floating_object &obj = chunk.objects.at(j);
-			// 	unloaded.counts[static_cast<unsigned long>(obj.object_type)]++;
-			// }
-			_unloaded_chunks[chunk_i] = unloaded;
-
-			_loaded_chunks.erase(&chunk);
-			// modified the list we are iterating so we need to account for that
-			i--;
-			continue;
-		}
-	}
-
-	for (int i = 0; i < MAX_LOADED_CHUNKS; i++) {
-		bn::point dir = _chunk_neighbors[i];
-		chunk_point chunk_pos = current_chunk_pos + dir;
-		int chunk_index = _chunk_pos_to_index(chunk_pos.x(), chunk_pos.y());
-		if (chunk_index < 0 || chunk_index >= MAX_CHUNKS) {
-			continue;
-		}
-
-		// see if it is loaded
-		// should we use a map instead?
-		bool found = false;
-		for (int j = 0; j < _loaded_chunks.size(); j++) {
-			if (_loaded_chunks[j].position == chunk_pos) {
-				found = true;
-				break;
-			}
-		}
-
-		if (!found) {
-			// load in the chunk
-
-			auto chunk =
-					loaded_chunk{
-						.position = chunk_pos,
-						.objects = bn::vector<floating_object, MAX_OBJS_PER_CHUNK>()
-					};
-
-			auto data = _unloaded_chunks.at(chunk_index);
-			auto chunk_origin = _chunk_index_to_world_pos(chunk_index);
-
-			// _rng.set_seed(chunk_index);
-
-			// for (int j = 0; j < static_cast<unsigned char>(obj_type::OBJ_TYPE_MAX); j++) {
-			// 	for (int k = 0; k < data.counts[j]; k++) {
-			// 		auto obj = floating_object{
-			// 			.object_type = static_cast<obj_type>(j),
-			// 			.velocity = bn::fixed_point(0, 0),
-			// 			.position = chunk_origin + bn::fixed_point(_rng.get_fixed() % CHUNK_SIZE, _rng.get_fixed() % CHUNK_SIZE)
-			// 		};
-			// 		chunk.objects.push_back(obj);
-			// 	}
-			// }
-
-			_loaded_chunks.push_back(chunk);
-		}
-	}
-
 	// go through all the loaded chunks and move the objects by their current
 	// velocity
 
-	for (int i = 0; i < _loaded_chunks.size(); i++) {
-		loaded_chunk &c = _loaded_chunks.at(i);
+	for (auto it = _objects.begin(); it != _objects.end(); ++it) {
+		auto &obj = *it;
 
-		if (!_is_chunk_in_view(_camera.position(), c.position)) {
+		bn::fixed dist = helpers::max_box_dist(obj.position, camera_pos);
+
+		if (dist < 2) {
+			// pickup
+			_objects.erase(it);
 			continue;
 		}
 
-		for (int j = 0; j < c.objects.size(); j++) {
-			floating_object &obj = c.objects.at(j);
+		// assumes the ship is in the center of the screen...
+		bn::fixed len = helpers::distance(camera_pos, obj.position);
+		bn::fixed_point dir = helpers::normalize_point(camera_pos - obj.position);
+		// attractor influence distance
+		constexpr int d = 40;
+		// push object towards ship
+		obj.velocity += dir * bn::min(bn::fixed(10), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
 
-			bn::fixed dist = helpers::max_box_dist(obj.position, camera_pos);
+		// move by velocity
+		auto desired_pos = obj.position + obj.velocity;
 
-			if (dist < 2) {
-				// pickup
-				c.objects.erase(&obj);
-				// modified the list we are iterating so we need to account for that
-				j--;
-				continue;
-			}
-
-			// attractor influence distance
-			constexpr int d = 48;
-
-			if (dist > d) {
-				continue;
-			}
-
-			bn::fixed len = helpers::distance(camera_pos, obj.position);
-			bn::fixed_point dir = helpers::normalize_point(camera_pos - obj.position);
-
-			obj.velocity += dir * bn::min(bn::fixed(10), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
-			obj.position += obj.velocity;
+		if (is_solid_tile(space_point_to_tile_point(desired_pos))) {
+			// bounce
+			obj.velocity *= bn::fixed(-0.9);
+		} else {
+			obj.position = desired_pos;
 			// velocity damping
 			obj.velocity *= bn::fixed(0.98);
+			// gravity
+			obj.velocity += bn::fixed_point(0.0, 0.08);
 		}
 	}
 
 	// render the objects
 
 	int sprite_index = 0;
+	int sprite_flicker_index = -1;
 
-	for (int i = 0; i < _loaded_chunks.size(); i++) {
+	int flicker_frame = _obj_flicker_frame / 10;
+
+	for (auto obj : _objects) {
 		if (sprite_index >= MAX_VISIBLE_OBJS) {
 			break;
 		}
-		loaded_chunk &c = _loaded_chunks.at(i);
-		if (!_is_chunk_in_view(_camera.position(), c.position)) {
+
+		sprite_flicker_index++;
+
+		if (!_is_point_in_view(_camera.position(), obj.position, 8)) {
 			continue;
 		}
-		for (int j = 0; j < c.objects.size(); j++) {
-			if (sprite_index >= MAX_VISIBLE_OBJS) {
-				break;
-			}
 
-			floating_object &obj = c.objects.at(j);
-			if (!_is_point_in_view(_camera.position(), obj.position, 8)) {
-				continue;
-			}
+		BN_ASSERT(sprite_index <= _obj_sprites.size());
 
-			BN_ASSERT(sprite_index <= _obj_sprites.size());
-
-			if (sprite_index == _obj_sprites.size()) {
-				_obj_sprites.push_back(bn::sprite_items::dev8.create_sprite());
-			}
-			bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
-			existing.set_position(obj.position);
-			existing.set_visible(true);
-			existing.set_camera(_camera);
-			sprite_index++;
+		if (sprite_flicker_index >= MAX_VISIBLE_OBJS / 2 && flicker_frame % 2 == sprite_flicker_index % 2) {
+			continue;
 		}
+
+		if (sprite_index == _obj_sprites.size()) {
+			// add sprite
+			_obj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
+		}
+		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
+		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
+						.create_tiles(obj.sprite_index));
+		existing.set_position(obj.position);
+		existing.set_visible(true);
+		existing.set_camera(_camera);
+		sprite_index++;
 	}
+
+	_obj_flicker_frame = (_obj_flicker_frame + 1) % 60;
 
 	// hide unused
 	for (; sprite_index < _obj_sprites.size(); sprite_index++) {

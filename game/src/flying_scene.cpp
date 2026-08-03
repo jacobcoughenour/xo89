@@ -11,6 +11,7 @@
 #include "bn_sprite_items_ship.h"
 
 #include "bn_music_items.h"
+#include "bn_sound_items.h"
 
 namespace game {
 
@@ -18,8 +19,8 @@ flying_scene::flying_scene(game_state &state) :
 		_state(state),
 		_camera(bn::camera_ptr::create(0, 0)),
 		_rng(1),
-		_space(_camera),
 		_bg_bg(bn::regular_bg_items::green_bg.create_bg()),
+		_space(_camera),
 		_ship_sprite(bn::sprite_items::ship.create_sprite()),
 		_ship_laser(bn::affine_bg_items::laser.create_bg()),
 		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
@@ -42,39 +43,40 @@ flying_scene::flying_scene(game_state &state) :
 	_ship_sprite.set_position(_ship_hitbox.position());
 
 	_breaking_sprite.set_camera(_camera);
+	_breaking_sprite.set_visible(false);
 	_crosshair_sprite.set_camera(_camera);
+	_crosshair_sprite.set_visible(false);
 
 	_ship_laser.set_camera(_camera);
 	_ship_laser.set_wrapping_enabled(false);
 	_ship_laser.set_pivot_position(bn::point(0, 64));
 
-	// bn::music_items::demo_1.play();
+	// bn::music_items::milkypack01.play();
 
-	while (!_space.is_generated()) {
-		auto total = chunked_space::MAX_CHUNKS;
+	// while (!_space.is_generated()) {
+	// 	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	// 	_text_sprites.clear();
+	// 	bn::string<34> text;
+	// 	bn::ostringstream text_stream(text);
+	// 	text_stream.append("Generating...");
+	// 	_state.small_fixed_text_generator.generate(0, -6, text, _text_sprites);
+	// 	text.clear();
+	// 	text_stream.append(_space.generated_chunks_count());
+	// 	text_stream.append("/");
+	// 	text_stream.append(chunked_space::MAX_CHUNKS);
+	// 	_state.small_fixed_text_generator.generate(0, 6, text, _text_sprites);
 
-		_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-		_text_sprites.clear();
-		bn::string<34> text;
-		bn::ostringstream text_stream(text);
-		text_stream.append("Generating...");
-		_state.small_fixed_text_generator.generate(0, -6, text, _text_sprites);
-		text.clear();
-		text_stream.append(_space.generated_chunks_count());
-		text_stream.append("/");
-		text_stream.append(chunked_space::MAX_CHUNKS);
-		_state.small_fixed_text_generator.generate(0, 6, text, _text_sprites);
+	// 	bn::core::update();
 
-		bn::core::update();
-
-		for (int i = 0; i < 32 && !_space.is_generated(); i++) {
-			_space.generate_next_chunk();
-		}
-	}
+	// 	for (int i = 0; i < 32 && !_space.is_generated(); i++) {
+	// 		_space.generate_next_chunk();
+	// 	}
+	// }
 
 	_text_sprites.clear();
 	_bg_bg.set_visible(true);
 	_ship_sprite.set_visible(true);
+	_crosshair_sprite.set_visible(true);
 }
 
 flying_scene::~flying_scene() {
@@ -95,24 +97,26 @@ bn::optional<scene_type> flying_scene::update() {
 					.create_tiles(((_ship_rotation / bn::fixed(360.0)) * 32).integer() % 32));
 
 	if (bn::keypad::a_held()) {
-		_ship_velocity -= helpers::angle_to_dir(-_ship_rotation) * bn::fixed(0.04);
+		_ship_velocity -= helpers::angle_to_dir(-_ship_rotation) * bn::fixed(0.045);
 	}
-	// if (bn::keypad::b_held()) {
-	// 	_ship_velocity += helpers::angle_to_dir(-_ship_rotation) * bn::fixed(0.032);
-	// }
+	if (bn::keypad::b_held()) {
+		_ship_velocity += helpers::angle_to_dir(-_ship_rotation) * bn::fixed(0.035);
+	}
 	_ship_velocity *= bn::fixed(0.99);
 
 	bn::fixed_point cur_pos = _ship_hitbox.position();
 	bn::fixed_point desired_pos = cur_pos + _ship_velocity;
 
-	// bn::fixed_rect last_aabb = _ship_hitbox;
 	bn::fixed_rect final_aabb = _ship_hitbox;
 	final_aabb.set_position(desired_pos);
 
 	bool hit = false;
 
 	if (
-			_space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.top_left())) || _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.top_right())) || _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.bottom_left())) || _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.bottom_right()))) {
+			_space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.top_left())) //
+			|| _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.top_right())) //
+			|| _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.bottom_left())) //
+			|| _space.is_solid_tile(_space.space_point_to_tile_point(final_aabb.bottom_right()))) {
 		hit = true;
 
 		_ship_velocity = _ship_velocity * bn::fixed(-0.6);
@@ -139,7 +143,7 @@ bn::optional<scene_type> flying_scene::update() {
 		}
 		_laser_target_cell = new_tile;
 
-		if (bn::keypad::b_held()) {
+		if (bn::keypad::r_held()) {
 			_ship_laser.set_visible(true);
 			_ship_laser.set_rotation_angle(bn::degrees_atan2(target_dir.x().integer(), target_dir.y().integer()) + 180);
 

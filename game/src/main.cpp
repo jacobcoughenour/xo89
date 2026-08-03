@@ -15,6 +15,7 @@
 int main() {
 	bn::core::init();
 
+	// todo don't include in release
 	game::tests::run_tests();
 
 	bn::unique_ptr<game::scene> current_scene;
