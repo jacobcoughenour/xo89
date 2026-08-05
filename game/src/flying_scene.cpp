@@ -85,6 +85,36 @@ flying_scene::~flying_scene() {
 bn::optional<scene_type> flying_scene::update() {
 	bn::optional<scene_type> result;
 
+	if (_is_paused) {
+		update_pause_menu();
+
+		if (bn::keypad::start_released()) {
+			_bg_bg.set_visible(true);
+			_ship_sprite.set_visible(true);
+			_crosshair_sprite.set_visible(true);
+			_space.set_visible(true);
+
+			_is_paused = false;
+		}
+	} else {
+		update_space();
+		update_text();
+
+		if (bn::keypad::start_released()) {
+			_is_paused = true;
+			_bg_bg.set_visible(false);
+			_ship_sprite.set_visible(false);
+			_crosshair_sprite.set_visible(false);
+			_space.set_visible(false);
+		}
+	}
+
+	_frame++;
+
+	return result;
+}
+
+void flying_scene::update_space() {
 	if (bn::keypad::left_held()) {
 		_ship_rotation -= 2.5;
 	}
@@ -199,25 +229,28 @@ bn::optional<scene_type> flying_scene::update() {
 	_camera.set_position(_ship_hitbox.position());
 
 	_space.update();
-
-	update_text();
-
-	_frame++;
-
-	return result;
 }
 
-inline void append_item_name(bn::ostringstream &stream, obj_type p_item_type) {
-	if (p_item_type == obj_type::ROCK) {
-		stream.append("ROCK");
-	} else if (p_item_type == obj_type::IRON) {
-		stream.append("IRON");
-	} else if (p_item_type == obj_type::COBALT) {
-		stream.append("COBALT");
-	} else if (p_item_type == obj_type::GOLD) {
-		stream.append("GOLD");
-	} else {
-		stream.append("UNKNOWN");
+void flying_scene::update_pause_menu() {
+	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_text_sprites.clear();
+
+	bn::string<32> text;
+	bn::ostringstream text_stream(text);
+	text.append("<<  [ RESOURCES ]  >>");
+	_state.small_fixed_text_generator.generate(0, -60, text, _text_sprites);
+
+	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
+		auto typ = static_cast<obj_type>(i);
+
+		text.clear();
+		helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
+		text_stream.append(" ");
+		append_item_name(text_stream, typ);
+
+		_state.small_fixed_text_generator.generate(-80, -40 + i * 9, text, _text_sprites);
 	}
 }
 
@@ -228,12 +261,13 @@ void flying_scene::update_text() {
 	int index = 0;
 	int item_frame = _state.item_queue_frame();
 
+	bn::string<15> text;
+	bn::ostringstream text_stream(text);
+
 	for (auto it = _state.item_pickup_queue.begin(); it != _state.item_pickup_queue.end(); ++it) {
 		auto &obj = *it;
 
-		bn::string<15> text;
-		bn::ostringstream text_stream(text);
-
+		text.clear();
 		text_stream.append("+");
 		text_stream.append(obj.amount);
 		text_stream.append(" ");

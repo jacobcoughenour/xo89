@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bn_sstream.h"
+
 namespace game {
 
 enum class obj_type : unsigned char {
@@ -11,5 +13,23 @@ enum class obj_type : unsigned char {
 	NICKEL,
 	OBJ_TYPE_MAX
 };
+
+constexpr int ITEM_TYPE_COUNT = static_cast<int>(obj_type::OBJ_TYPE_MAX);
+
+inline const void append_item_name(bn::ostringstream &stream, obj_type p_item_type) {
+	if (p_item_type == obj_type::ROCK) {
+		stream.append("ROCK");
+	} else if (p_item_type == obj_type::IRON) {
+		stream.append("IRON");
+	} else if (p_item_type == obj_type::COBALT) {
+		stream.append("COBALT");
+	} else if (p_item_type == obj_type::GOLD) {
+		stream.append("GOLD");
+	} else if (p_item_type == obj_type::NICKEL) {
+		stream.append("NICKEL");
+	} else {
+		stream.append("UNKNOWN");
+	}
+}
 
 } //namespace game

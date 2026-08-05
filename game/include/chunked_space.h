@@ -100,6 +100,8 @@ public:
 	int generated_chunks_count();
 	bool is_generated();
 
+	void set_visible(bool p_visible);
+
 	void update();
 
 	bn::fixed_point spawn_point();

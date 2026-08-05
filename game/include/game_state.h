@@ -22,7 +22,7 @@ public:
 	bn::sprite_text_generator small_fixed_text_generator;
 	bn::sprite_text_generator small_variable_text_generator;
 
-	int item_inventory[static_cast<unsigned long>(obj_type::OBJ_TYPE_MAX)];
+	int item_inventory[ITEM_TYPE_COUNT];
 
 	game_state();
 	void update();

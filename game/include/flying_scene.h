@@ -25,9 +25,13 @@ public:
 	~flying_scene();
 	[[nodiscard]] bn::optional<scene_type> update() final;
 
-	void update_text();
-
 private:
+	bool _is_paused;
+
+	void update_text();
+	void update_space();
+	void update_pause_menu();
+
 	game_state &_state;
 
 	bn::camera_ptr _camera;

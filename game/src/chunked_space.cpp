@@ -530,6 +530,16 @@ void chunked_space::_update_tilemap() {
 	map.reload_cells_ref();
 }
 
+void chunked_space::set_visible(bool p_visible) {
+	_tilemap_bg->set_visible(p_visible);
+
+	if (!p_visible) {
+		for (int i = 0; i < _obj_sprites.size(); i++) {
+			_obj_sprites.at(i).set_visible(false);
+		}
+	}
+}
+
 void chunked_space::update() {
 	bn::fixed_point camera_pos = _camera.position();
 
