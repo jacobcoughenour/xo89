@@ -16,7 +16,8 @@ inline int _relative_tile_index(int p_from_index, int p_x, int p_y, int p_tilese
 	return p_from_index + p_x + p_y * p_tileset_columns;
 }
 
-chunked_space::chunked_space(bn::camera_ptr camera) :
+chunked_space::chunked_space(game_state &state, bn::camera_ptr camera) :
+		_state(state),
 		_tilemap_item(_tilemap_cells[0], bn::size(TILEMAP_CELLS_SIZE, TILEMAP_CELLS_SIZE)),
 		_camera(camera),
 		_rng(),
@@ -40,6 +41,10 @@ chunked_space::chunked_space(bn::camera_ptr camera) :
 	BN_ASSERT(!_is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
 
 	BN_ASSERT(_relative_tile_index(1, 2, 2, 16) == 35);
+
+	BN_ASSERT(space_point_to_tile_point(bn::fixed_point(0.4, 2)) == bn::point(0, 0), space_point_to_tile_point(bn::fixed_point(0.4, 2)).x());
+
+	BN_ASSERT(space_point_to_tile_point(bn::fixed_point(-0.4, -2)) == bn::point(-1, -1), space_point_to_tile_point(bn::fixed_point(-0.4, -2)).x());
 }
 
 chunked_space::~chunked_space() {
@@ -266,8 +271,12 @@ bn::fixed_point chunked_space::spawn_point() {
 
 bn::point chunked_space::space_point_to_tile_point(bn::fixed_point p_pos) {
 	return bn::point(
-			(p_pos.x() < 0 ? p_pos.x().ceil_integer() : p_pos.x().floor_integer()) / TILE_SIZE_PX,
-			(p_pos.y() < 0 ? p_pos.y().ceil_integer() : p_pos.y().floor_integer()) / TILE_SIZE_PX);
+			p_pos.x() < 0
+					? -((-p_pos.x().floor_integer()) / TILE_SIZE_PX) - 1
+					: (p_pos.x().floor_integer() / TILE_SIZE_PX),
+			p_pos.y() < 0
+					? -((-p_pos.y().floor_integer()) / TILE_SIZE_PX) - 1
+					: (p_pos.y().floor_integer() / TILE_SIZE_PX));
 }
 
 bool chunked_space::is_solid_tile(bn::point p_pos) {
@@ -540,7 +549,7 @@ void chunked_space::update() {
 		bn::fixed dist = helpers::max_box_dist(obj.position, camera_pos);
 
 		if (dist < 2) {
-			// pickup
+			_state.pickup_resource(obj.object_type, 1);
 			_objects.erase(it);
 			continue;
 		}

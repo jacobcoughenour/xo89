@@ -20,7 +20,7 @@ flying_scene::flying_scene(game_state &state) :
 		_camera(bn::camera_ptr::create(0, 0)),
 		_rng(1),
 		_bg_bg(bn::regular_bg_items::green_bg.create_bg()),
-		_space(_camera),
+		_space(state, _camera),
 		_ship_sprite(bn::sprite_items::ship.create_sprite()),
 		_ship_laser(bn::affine_bg_items::laser.create_bg()),
 		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
@@ -53,25 +53,25 @@ flying_scene::flying_scene(game_state &state) :
 
 	// bn::music_items::milkypack01.play();
 
-	// while (!_space.is_generated()) {
-	// 	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	// 	_text_sprites.clear();
-	// 	bn::string<34> text;
-	// 	bn::ostringstream text_stream(text);
-	// 	text_stream.append("Generating...");
-	// 	_state.small_fixed_text_generator.generate(0, -6, text, _text_sprites);
-	// 	text.clear();
-	// 	text_stream.append(_space.generated_chunks_count());
-	// 	text_stream.append("/");
-	// 	text_stream.append(chunked_space::MAX_CHUNKS);
-	// 	_state.small_fixed_text_generator.generate(0, 6, text, _text_sprites);
+	while (!_space.is_generated()) {
+		_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_text_sprites.clear();
+		bn::string<34> text;
+		bn::ostringstream text_stream(text);
+		text_stream.append("Generating...");
+		_state.small_fixed_text_generator.generate(0, -6, text, _text_sprites);
+		text.clear();
+		text_stream.append(_space.generated_chunks_count());
+		text_stream.append("/");
+		text_stream.append(chunked_space::MAX_CHUNKS);
+		_state.small_fixed_text_generator.generate(0, 6, text, _text_sprites);
 
-	// 	bn::core::update();
+		bn::core::update();
 
-	// 	for (int i = 0; i < 32 && !_space.is_generated(); i++) {
-	// 		_space.generate_next_chunk();
-	// 	}
-	// }
+		for (int i = 0; i < 32 && !_space.is_generated(); i++) {
+			_space.generate_next_chunk();
+		}
+	}
 
 	_text_sprites.clear();
 	_bg_bg.set_visible(true);
@@ -200,23 +200,51 @@ bn::optional<scene_type> flying_scene::update() {
 
 	_space.update();
 
-	// update_text();
+	update_text();
 
 	_frame++;
 
 	return result;
 }
 
+inline void append_item_name(bn::ostringstream &stream, obj_type p_item_type) {
+	if (p_item_type == obj_type::ROCK) {
+		stream.append("ROCK");
+	} else if (p_item_type == obj_type::IRON) {
+		stream.append("IRON");
+	} else if (p_item_type == obj_type::COBALT) {
+		stream.append("COBALT");
+	} else if (p_item_type == obj_type::GOLD) {
+		stream.append("GOLD");
+	} else {
+		stream.append("UNKNOWN");
+	}
+}
+
 void flying_scene::update_text() {
-	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
-
+	_state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
 	_text_sprites.clear();
-	bn::string<36> text;
-	bn::ostringstream text_stream(text);
 
-	text_stream.append(_ship_velocity.y());
+	int index = 0;
+	int item_frame = _state.item_queue_frame();
 
-	_state.small_fixed_text_generator.generate(16, 0, text, _text_sprites);
+	for (auto it = _state.item_pickup_queue.begin(); it != _state.item_pickup_queue.end(); ++it) {
+		auto &obj = *it;
+
+		bn::string<15> text;
+		bn::ostringstream text_stream(text);
+
+		text_stream.append("+");
+		text_stream.append(obj.amount);
+		text_stream.append(" ");
+		append_item_name(text_stream, obj.object_type);
+
+		auto y = bn::clamp((game_state::ITEM_QUEUE_FRAMES_TIME - (obj.frame - item_frame)) / 4, 0, 4);
+
+		_state.small_fixed_text_generator.generate(118, 80 - index * 9 - y, text, _text_sprites);
+
+		index++;
+	}
 }
 
 } //namespace game

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "chunked_space.h"
+#include "obj_type.h"
 
 #include "bn_array.h"
 #include "bn_bg_palettes.h"
 #include "bn_bg_tiles.h"
 #include "bn_common.h"
+#include "bn_list.h"
 #include "bn_memory.h"
 #include "bn_regular_bg_item.h"
 #include "bn_regular_bg_map_ptr.h"
@@ -16,15 +17,32 @@
 
 namespace game {
 
-// this is the state shared between rendered scenes.
 class game_state {
 public:
 	bn::sprite_text_generator small_fixed_text_generator;
 	bn::sprite_text_generator small_variable_text_generator;
 
-	// todo maybe this is where we save/load?
+	int item_inventory[static_cast<unsigned long>(obj_type::OBJ_TYPE_MAX)];
 
 	game_state();
 	void update();
+
+	void clear_inventory();
+	void pickup_resource(obj_type p_type, int amount);
+
+	struct item_queue_entry {
+		obj_type object_type;
+		int amount;
+		int frame;
+	};
+
+	static constexpr int ITEM_QUEUE_FRAMES_TIME = 90;
+
+private:
+	int _item_queue_frame;
+
+public:
+	bn::list<item_queue_entry, 5> item_pickup_queue;
+	int item_queue_frame() { return _item_queue_frame; }
 };
 } //namespace game

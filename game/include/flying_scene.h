@@ -3,6 +3,7 @@
 #include "chunked_space.h"
 #include "game_state.h"
 #include "helpers.h"
+#include "obj_type.h"
 #include "scene.h"
 
 #include "bn_affine_bg_ptr.h"

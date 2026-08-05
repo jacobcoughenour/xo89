@@ -1,6 +1,8 @@
 #pragma once
 
+#include "game_state.h"
 #include "helpers.h"
+#include "obj_type.h"
 
 #include "bn_bg_palette_item.h"
 #include "bn_bg_tiles.h"
@@ -31,16 +33,6 @@ namespace game {
 using chunk_point = bn::point;
 
 using packed_tile_data = unsigned char;
-
-enum class obj_type : unsigned char {
-	// https://en.wikipedia.org/wiki/Asteroid_mining#:~:text=crust%20with%20metals%20like%20gold%2C%20cobalt%2C%20iron%2C%20manganese%2C%20molybdenum%2C%20nickel%2C%20osmium%2C%20palladium%2C%20platinum%2C%20rhenium%2C%20rhodium%2C%20ruthenium%20and%20tungsten
-	ROCK,
-	IRON,
-	COBALT,
-	GOLD,
-	NICKEL,
-	OBJ_TYPE_MAX
-};
 
 enum class tile_material : unsigned char {
 	AIR,
@@ -101,7 +93,7 @@ public:
 		bn::fixed_point intersection_pos;
 	};
 
-	chunked_space(bn::camera_ptr camera);
+	explicit chunked_space(game_state &state, bn::camera_ptr camera);
 	~chunked_space();
 
 	void generate_next_chunk();
@@ -129,6 +121,8 @@ public:
 	tile_data unpack_tile_data(packed_tile_data p_data);
 
 private:
+	game_state &_state;
+
 	struct floating_object {
 		obj_type object_type;
 		unsigned char sprite_index;
