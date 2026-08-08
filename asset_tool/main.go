@@ -33,27 +33,21 @@ func createShipSprites() error {
 
 	total_frames := 32
 
-	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 16, Y: 16 * total_frames}})
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 32, Y: 32 * total_frames}})
 	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
 
-	img, _, _, err := loadImage("ship", 64, 64, 0)
-	if err != nil {
-		return err
-	}
-
-	rot_amount := 360.0 / float64(total_frames)
-
 	for i := range total_frames {
-		rotated := transform.Rotate(img, float64(i)*rot_amount, &transform.RotationOptions{
-			ResizeBounds: false,
-			Pivot:        &image.Point{32, 32},
-		})
 
-		scaled := transform.Resize(rotated, 16, 16, transform.NearestNeighbor)
+		img, _, _, err := loadImage(fmt.Sprintf("drone_frames/%04d", i+1), 256, 256, 0)
+		if err != nil {
+			return err
+		}
+
+		scaled := transform.Resize(img, 32, 32, transform.NearestNeighbor)
 
 		draw.Draw(
 			canvas,
-			image.Rect(0, i*16, 32, 16+i*16),
+			image.Rect(0, i*32, 64, 32+i*32),
 			scaled,
 			image.Point{0, 0},
 			draw.Over)

@@ -31,11 +31,10 @@ chunked_space::chunked_space(game_state &state, bn::camera_ptr camera) :
 			bn::regular_bg_tiles_items::tiles,
 			bn::bg_palette_items::palette,
 			this->_tilemap_item);
-	_tilemap_bg = _tilemap_bg_item->create_bg(0, 0);
+
+	set_visible(true);
 
 	bn::bg_tiles::set_allow_offset(true);
-
-	_tilemap_bg->set_camera(_camera);
 
 	BN_ASSERT(_is_point_in_view(bn::point(0, 0), bn::point(-120, 0), 0));
 	BN_ASSERT(!_is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
@@ -531,7 +530,17 @@ void chunked_space::_update_tilemap() {
 }
 
 void chunked_space::set_visible(bool p_visible) {
-	_tilemap_bg->set_visible(p_visible);
+	if (p_visible) {
+		_tilemap_bg = _tilemap_bg_item->create_bg(0, 0);
+		_tilemap_bg->set_priority(2);
+		_tilemap_bg->set_camera(_camera);
+
+		_tilemap_loaded_point = _point_to_tilemap_pos(_camera.position());
+		_update_tilemap();
+
+	} else {
+		_tilemap_bg.reset();
+	}
 
 	if (!p_visible) {
 		for (int i = 0; i < _obj_sprites.size(); i++) {

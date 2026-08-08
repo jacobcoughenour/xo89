@@ -16,7 +16,7 @@ enum class obj_type : unsigned char {
 
 constexpr int ITEM_TYPE_COUNT = static_cast<int>(obj_type::OBJ_TYPE_MAX);
 
-inline const void append_item_name(bn::ostringstream &stream, obj_type p_item_type) {
+inline void append_item_name(bn::ostringstream &stream, obj_type p_item_type) {
 	if (p_item_type == obj_type::ROCK) {
 		stream.append("ROCK");
 	} else if (p_item_type == obj_type::IRON) {
