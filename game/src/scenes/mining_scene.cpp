@@ -1,0 +1,659 @@
+#include "scenes/mining_scene.h"
+
+// assets
+#include "bn_affine_bg_items_laser.h"
+#include "bn_bg_palette_items_palette.h"
+#include "bn_music_items.h"
+#include "bn_regular_bg_items_green_bg.h"
+#include "bn_sound_items.h"
+#include "bn_sprite_items_breaking.h"
+#include "bn_sprite_items_crosshair.h"
+#include "bn_sprite_items_dev16.h"
+#include "bn_sprite_items_dev32.h"
+#include "bn_sprite_items_dev8.h"
+#include "bn_sprite_items_dropped_items.h"
+#include "bn_sprite_items_ship.h"
+
+namespace game {
+
+mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
+		scene(p_shared),
+		_state(p_state),
+		_small_text(common::fixed_8x8_sprite_font),
+		_camera(bn::camera_ptr::create(0, 0)),
+		_rng(1),
+		_tilemap_item(_tilemap_cells[0], bn::size(mining_state::TILEMAP_CELLS_SIZE, mining_state::TILEMAP_CELLS_SIZE)),
+		_ship_sprite(bn::sprite_items::ship.create_sprite()),
+		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
+		_crosshair_sprite(bn::sprite_items::crosshair.create_sprite()) {
+	_ship_sprite.set_visible(false);
+
+	_ship_sprite.set_camera(_camera);
+	_ship_sprite.set_bg_priority(0);
+	_ship_sprite.set_position(_state.ship_hitbox.position());
+
+	_breaking_sprite.set_camera(_camera);
+	_breaking_sprite.set_visible(false);
+	_breaking_sprite.set_bg_priority(0);
+	_crosshair_sprite.set_camera(_camera);
+	_crosshair_sprite.set_visible(false);
+	_crosshair_sprite.set_bg_priority(0);
+
+	// sit in a hard loop while we generate the level
+	while (!_state.is_generated()) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_text_sprites.clear();
+		bn::string<34> text;
+		bn::ostringstream text_stream(text);
+		text_stream.append("Generating...");
+		_small_text.generate(0, -6, text, _text_sprites);
+		text.clear();
+		text_stream.append(_state.generated_chunks_count());
+		text_stream.append("/");
+		text_stream.append(mining_state::MAX_CHUNKS);
+		_small_text.generate(0, 6, text, _text_sprites);
+
+		bn::core::update();
+
+		for (int i = 0; i < 32 && !_state.is_generated(); i++) {
+			_state.generate_next_chunk();
+		}
+	}
+
+	_text_sprites.clear();
+
+	_unpause();
+}
+
+mining_scene::~mining_scene() {
+}
+
+bn::optional<scene_type> mining_scene::update() {
+	bn::optional<scene_type> result;
+
+	if (_pause_type == mining_pause_menu_type::NONE) {
+		_update_space();
+		_update_overlay_text();
+
+		if (bn::keypad::start_released()) {
+			_pause(false);
+		} else if (bn::keypad::select_released()) {
+			_pause(true);
+		}
+
+	} else {
+		_update_pause_menu();
+
+		if (bn::keypad::start_released()) {
+			_unpause();
+		}
+	}
+
+	_frame++;
+
+	return result;
+}
+
+void mining_scene::_pause(bool p_show_radar) {
+	bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+
+	_ship_laser.reset();
+	_bg_bg.reset();
+	_tilemap_bg.reset();
+	_ship_sprite.set_visible(false);
+	_crosshair_sprite.set_visible(false);
+
+	for (int i = 0; i < _obj_sprites.size(); i++) {
+		_obj_sprites.at(i).set_visible(false);
+	}
+
+	_pause_type = p_show_radar ? mining_pause_menu_type::RADAR : mining_pause_menu_type::RESOURCES;
+}
+
+void mining_scene::_unpause() {
+	_scan_map_bg.reset();
+
+	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 3));
+
+	// setup tilemap
+
+	bn::bg_tiles::set_allow_offset(false);
+
+	_tilemap_bg_item = bn::regular_bg_item(
+			bn::regular_bg_tiles_items::tiles,
+			bn::bg_palette_items::palette,
+			this->_tilemap_item);
+
+	bn::bg_tiles::set_allow_offset(true);
+
+	_tilemap_bg = _tilemap_bg_item->create_bg(0, 0);
+	_tilemap_bg->set_priority(2);
+	_tilemap_bg->set_camera(_camera);
+
+	_tilemap_loaded_point = _state.point_to_tilemap_pos(_camera.position());
+	_update_tilemap();
+
+	_bg_bg = bn::regular_bg_items::green_bg.create_bg();
+	_ship_laser = bn::affine_bg_items::laser.create_bg();
+
+	_bg_bg->set_visible(false);
+	_ship_laser->set_visible(false);
+
+	_bg_bg->set_priority(3);
+	_ship_laser->set_priority(2);
+
+	_ship_laser->set_camera(_camera);
+	_ship_laser->set_wrapping_enabled(false);
+	_ship_laser->set_pivot_position(bn::point(0, 64));
+
+	_ship_sprite.set_visible(true);
+	_crosshair_sprite.set_visible(true);
+	_bg_bg->set_visible(true);
+
+	_pause_type = mining_pause_menu_type::NONE;
+}
+
+inline bool _has_flags(unsigned short value, unsigned short mask) {
+	return (value & mask) == mask;
+}
+
+void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material) {
+	const int tileset_columns = 32;
+
+	const int solid_offsets[3] = { tileset_columns, tileset_columns + 1, 0 };
+
+	int corner_ids[4] = { 0, 0, 0, 0 };
+	bool corner_flip_v[4] = { false, false, false, false };
+	bool corner_flip_h[4] = { false, false, false, false };
+
+	if (p_material == tile_material::AIR) {
+		// leave the index on 0
+	} else {
+		_rng.set_seed(seed);
+
+		// TOP = 1 << 0, //          0000 0001
+		// RIGHT = 1 << 1, //        0000 0010
+		// BOTTOM = 1 << 2, //       0000 0100
+		// LEFT = 1 << 3, //         0000 1000
+		// TOP_LEFT = 1 << 4, //     0001 0000
+		// TOP_RIGHT = 1 << 5, //    0010 0000
+		// BOTTOM_RIGHT = 1 << 6, // 0100 0000
+		// BOTTOM_LEFT = 1 << 7, //  1000 0000
+
+		if (p_edge_mask != 0xFF) {
+			auto top = _has_flags(p_edge_mask, tile_flags::TOP);
+			auto left = _has_flags(p_edge_mask, tile_flags::LEFT);
+			auto right = _has_flags(p_edge_mask, tile_flags::RIGHT);
+			auto bottom = _has_flags(p_edge_mask, tile_flags::BOTTOM);
+			auto top_left = _has_flags(p_edge_mask, tile_flags::TOP_LEFT);
+			auto top_right = _has_flags(p_edge_mask, tile_flags::TOP_RIGHT);
+			auto bottom_left = _has_flags(p_edge_mask, tile_flags::BOTTOM_LEFT);
+			auto bottom_right = _has_flags(p_edge_mask, tile_flags::BOTTOM_RIGHT);
+
+			if (!top || !left || !top_left) {
+				if (top && !left) {
+					corner_ids[0] = 1;
+				} else if (top && left) {
+					corner_ids[0] = 2;
+					corner_flip_h[0] = true;
+				} else if (!top && left) {
+					corner_ids[0] = 3;
+				} else {
+					corner_ids[0] = 4;
+					corner_flip_h[0] = true;
+				}
+			}
+			if (!top || !right || !top_right) {
+				if (top && !right) {
+					corner_ids[1] = 1;
+					corner_flip_h[1] = true;
+				} else if (top && right) {
+					corner_ids[1] = 2;
+				} else if (!top && right) {
+					corner_ids[1] = 3;
+				} else {
+					corner_ids[1] = 4;
+				}
+			}
+			if (!bottom || !left || !bottom_left) {
+				if (bottom && !left) {
+					corner_ids[2] = 1;
+				} else if (bottom && left) {
+					corner_ids[2] = tileset_columns + 2;
+					corner_flip_h[2] = true;
+				} else if (!bottom && left) {
+					corner_ids[2] = tileset_columns + 3;
+				} else {
+					corner_ids[2] = tileset_columns + 4;
+					corner_flip_h[2] = true;
+				}
+			}
+			if (!bottom || !right || !bottom_right) {
+				if (bottom && !right) {
+					corner_ids[3] = 1;
+					corner_flip_h[3] = true;
+				} else if (bottom && right) {
+					corner_ids[3] = tileset_columns + 2;
+				} else if (!bottom && right) {
+					corner_ids[3] = tileset_columns + 3;
+				} else {
+					corner_ids[3] = tileset_columns + 4;
+				}
+			}
+		}
+
+		for (size_t i = 0; i < 4; i++) {
+			auto s = corner_ids[i];
+
+			if (s == 0 || s == 1) {
+				corner_flip_v[i] = _rng.get_bool();
+			}
+			if (s == 0 || s % tileset_columns == 3) {
+				corner_flip_h[i] = _rng.get_bool();
+			}
+			if (s == 0) {
+				auto rand_offset = _rng.get_int(p_material == tile_material::ROCK || p_material == tile_material::BEDROCK ? 2 : 3);
+				s = solid_offsets[rand_offset];
+			}
+
+			// offset it to match the material
+			s += bn::max(0, static_cast<int>(p_material) - 2) * tileset_columns * 2;
+
+			corner_ids[i] = s;
+		}
+	}
+
+	// write back
+
+	// get references to current tiles
+	bn::regular_bg_map_cell &top_left = _tilemap_cells[_tilemap_item.cell_index(p_x * 2, p_y * 2)];
+	bn::regular_bg_map_cell &top_right = _tilemap_cells[_tilemap_item.cell_index(p_x * 2 + 1, p_y * 2)];
+	bn::regular_bg_map_cell &bottom_left = _tilemap_cells[_tilemap_item.cell_index(p_x * 2, p_y * 2 + 1)];
+	bn::regular_bg_map_cell &bottom_right = _tilemap_cells[_tilemap_item.cell_index(p_x * 2 + 1, p_y * 2 + 1)];
+
+	bn::regular_bg_map_cell_info top_left_info(top_left);
+	bn::regular_bg_map_cell_info top_right_info(top_right);
+	bn::regular_bg_map_cell_info bottom_left_info(bottom_left);
+	bn::regular_bg_map_cell_info bottom_right_info(bottom_right);
+
+	if (p_material == tile_material::BEDROCK) {
+		top_left_info.set_palette_id(1);
+		top_right_info.set_palette_id(1);
+		bottom_left_info.set_palette_id(1);
+		bottom_right_info.set_palette_id(1);
+	} else {
+		top_left_info.set_palette_id(0);
+		top_right_info.set_palette_id(0);
+		bottom_left_info.set_palette_id(0);
+		bottom_right_info.set_palette_id(0);
+	}
+
+	top_left_info.set_tile_index(corner_ids[0]);
+	top_right_info.set_tile_index(corner_ids[1]);
+	bottom_left_info.set_tile_index(corner_ids[2]);
+	bottom_right_info.set_tile_index(corner_ids[3]);
+
+	top_left_info.set_horizontal_flip(corner_flip_h[0]);
+	top_right_info.set_horizontal_flip(corner_flip_h[1]);
+	bottom_left_info.set_horizontal_flip(corner_flip_h[2]);
+	bottom_right_info.set_horizontal_flip(corner_flip_h[3]);
+
+	top_left_info.set_vertical_flip(corner_flip_v[0]);
+	top_right_info.set_vertical_flip(corner_flip_v[1]);
+	bottom_left_info.set_vertical_flip(corner_flip_v[2]);
+	bottom_right_info.set_vertical_flip(corner_flip_v[3]);
+
+	top_left = top_left_info.cell();
+	top_right = top_right_info.cell();
+	bottom_left = bottom_left_info.cell();
+	bottom_right = bottom_right_info.cell();
+}
+
+void mining_scene::_update_tilemap() {
+	_tilemap_bg->set_position(
+			_tilemap_loaded_point * mining_state::TILEMAP_LOAD_STRIDE_PX);
+	auto top_left_world_point = _tilemap_loaded_point * mining_state::TILEMAP_LOAD_STRIDE_PX;
+	top_left_world_point -= bn::point(128, 128);
+	auto top_left_tile_point = top_left_world_point / 16;
+
+	// populate current tilemap
+	for (int y = 0; y < mining_state::TILEMAP_SIZE; y++) {
+		for (int x = 0; x < mining_state::TILEMAP_SIZE; x++) {
+			auto px = top_left_tile_point.x() + x;
+			auto py = top_left_tile_point.y() + y;
+
+			auto tile = _state.get_tile_at(px, py);
+
+			auto seed = helpers::tile_pos_to_index(
+					px,
+					py,
+					mining_state::SPACE_TILE_WIDTH);
+
+			if (tile.material == tile_material::AIR) {
+				_set_tilemap_tile(seed, x, y, 0, tile.material);
+				continue;
+			}
+
+			auto top = _state.get_tile_at(px, py - 1);
+			auto right = _state.get_tile_at(px + 1, py);
+			auto bottom = _state.get_tile_at(px, py + 1);
+			auto left = _state.get_tile_at(px - 1, py);
+
+			auto top_left = _state.get_tile_at(px - 1, py - 1);
+			auto top_right = _state.get_tile_at(px + 1, py - 1);
+			auto bottom_left = _state.get_tile_at(px - 1, py + 1);
+			auto bottom_right = _state.get_tile_at(px + 1, py + 1);
+
+			unsigned short flag = 0;
+			if (top.material != tile_material::AIR) {
+				flag |= tile_flags::TOP;
+			}
+			if (right.material != tile_material::AIR) {
+				flag |= tile_flags::RIGHT;
+			}
+			if (bottom.material != tile_material::AIR) {
+				flag |= tile_flags::BOTTOM;
+			}
+			if (left.material != tile_material::AIR) {
+				flag |= tile_flags::LEFT;
+			}
+
+			if (top_left.material != tile_material::AIR) {
+				flag |= tile_flags::TOP_LEFT;
+			}
+			if (top_right.material != tile_material::AIR) {
+				flag |= tile_flags::TOP_RIGHT;
+			}
+			if (bottom_left.material != tile_material::AIR) {
+				flag |= tile_flags::BOTTOM_LEFT;
+			}
+			if (bottom_right.material != tile_material::AIR) {
+				flag |= tile_flags::BOTTOM_RIGHT;
+			}
+
+			_set_tilemap_tile(seed, x, y, flag, tile.material);
+		}
+	}
+
+	bn::regular_bg_map_ptr map = _tilemap_bg->map();
+	map.reload_cells_ref();
+}
+
+void mining_scene::_update_space() {
+	_state.update();
+
+	_ship_sprite.set_tiles(bn::sprite_items::ship.tiles_item()
+					.create_tiles(((_state.ship_rotation / bn::fixed(360.0)) * 32).integer() % 32));
+
+	_ship_sprite.set_position(_state.ship_hitbox.position());
+	_ship_laser->set_position(_state.ship_hitbox.position());
+
+	const bn::fixed max_dist = 64;
+
+	auto targetting_hit = _state.raycast(_state.ship_hitbox.center(), -helpers::angle_to_dir(-_state.ship_rotation + 8), max_dist);
+	auto target_dir = -helpers::set_length(helpers::angle_to_dir(-_state.ship_rotation), max_dist - 4.0);
+
+	if (targetting_hit.has_value()) {
+		auto dist = helpers::distance(_state.ship_hitbox.center(), targetting_hit.value().intersection_pos);
+		target_dir = targetting_hit.value().intersection_pos - _state.ship_hitbox.position();
+
+		auto new_tile = targetting_hit.value().tile_pos;
+		if (new_tile != _laser_target_cell) {
+			_mining_timer = 0;
+			_breaking_sprite.set_position(targetting_hit.value().intersection_pos);
+		}
+		_laser_target_cell = new_tile;
+
+		if (bn::keypad::r_held()) {
+			_ship_laser->set_visible(true);
+			_ship_laser->set_rotation_angle(bn::degrees_atan2(target_dir.x().integer(), target_dir.y().integer()) + 180);
+
+			// flicker
+			_ship_laser->set_horizontal_scale(_frame % 4 < 2 ? 0.05 : 0.06);
+
+			if (dist > 1.0) {
+				_ship_laser->set_vertical_scale(dist / 128.0);
+			} else {
+				_ship_laser->set_visible(false);
+			}
+
+			_mining_timer++;
+
+			if (_mining_timer >= 30) {
+				// todo move to state
+
+				// mine the cell
+				_state.mine_tile(_laser_target_cell);
+				_mining_timer = 0;
+			} else {
+				_breaking_sprite.set_tiles(bn::sprite_items::breaking.tiles_item()
+								.create_tiles(_mining_timer / (30 / 4) % 4));
+			}
+		} else {
+			_ship_laser->set_visible(false);
+			_ship_laser->set_vertical_scale(1.4);
+			_mining_timer = 0;
+		}
+	} else {
+		_ship_laser->set_visible(false);
+		_mining_timer = 0;
+	}
+	_bg_bg->set_position(-_camera.position() / 2);
+
+	auto crosshair_target_pos = _state.ship_hitbox.center() + target_dir;
+	if (helpers::distance(crosshair_target_pos, _crosshair_sprite.position()) > 1.0) {
+		_crosshair_sprite.set_position(helpers::lerp_fixed_point(_crosshair_sprite.position(), crosshair_target_pos, 0.55));
+	} else {
+		_crosshair_sprite.set_position(crosshair_target_pos);
+	}
+
+	if (targetting_hit.has_value()) {
+		if (_crosshair_frame < 4) {
+			_crosshair_frame++;
+		}
+	} else if (_crosshair_frame > 0) {
+		_crosshair_frame--;
+	}
+	_crosshair_sprite.set_tiles(bn::sprite_items::crosshair.tiles_item().create_tiles(_crosshair_frame / 2));
+
+	_breaking_sprite.set_visible(_mining_timer > 0);
+
+	// keep camera on the ship
+	_camera.set_position(_state.ship_hitbox.position());
+
+	bn::point tilemap_pos = _state.point_to_tilemap_pos(_state.ship_hitbox.position());
+
+	if (tilemap_pos != _tilemap_loaded_point || _state.is_tileset_dirty) {
+		_tilemap_loaded_point = tilemap_pos;
+		_update_tilemap();
+		_state.is_tileset_dirty = false;
+	}
+
+	// render the objects
+
+	int sprite_index = 0;
+	int sprite_flicker_index = -1;
+
+	int flicker_frame = _obj_flicker_frame / 10;
+
+	for (auto obj : _state.objects) {
+		if (sprite_index >= mining_state::MAX_VISIBLE_OBJS) {
+			break;
+		}
+
+		sprite_flicker_index++;
+
+		if (!helpers::is_point_in_view(_camera.position(), obj.position, 8)) {
+			continue;
+		}
+
+		BN_ASSERT(sprite_index <= _obj_sprites.size());
+
+		if (sprite_flicker_index >= mining_state::MAX_VISIBLE_OBJS / 2 && flicker_frame % 2 == sprite_flicker_index % 2) {
+			continue;
+		}
+
+		if (sprite_index == _obj_sprites.size()) {
+			// add sprite
+			_obj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
+		}
+		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
+		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
+						.create_tiles(obj.sprite_index));
+		existing.set_position(obj.position);
+		existing.set_visible(true);
+		existing.set_camera(_camera);
+		sprite_index++;
+	}
+
+	_obj_flicker_frame = (_obj_flicker_frame + 1) % 60;
+
+	// hide unused
+	for (; sprite_index < _obj_sprites.size(); sprite_index++) {
+		_obj_sprites.at(sprite_index).set_visible(false);
+	}
+}
+
+void mining_scene::_update_pause_menu() {
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_text_sprites.clear();
+
+	bn::string<32> text;
+	bn::ostringstream text_stream(text);
+	// text.append("<<  [ RESOURCES ]  >>");
+	text.append("<<  [ RADAR ]  >>");
+	_small_text.generate(0, -72, text, _text_sprites);
+
+	// _state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	// for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
+	// 	auto typ = static_cast<obj_type>(i);
+
+	// 	text.clear();
+	// 	helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
+	// 	text_stream.append(" ");
+	// 	append_item_name(text_stream, typ);
+
+	// 	_state.small_fixed_text_generator.generate(-80, -40 + i * 9, text, _text_sprites);
+	// }
+
+	bn::core::update();
+
+	if (!_scan_map_bg.has_value()) {
+		_scan_map_bg = bn::dp_direct_bitmap_bg_ptr::create();
+		bn::dp_direct_bitmap_bg_painter painter(_scan_map_bg.value());
+
+		painter.fill(bn::color(0, 0, 0));
+		painter.flip_page_now();
+		bn::core::update();
+		painter.flip_page_now();
+
+		bn::point size = bn::point(160, 128);
+		bn::point ship_pos = _state.space_point_to_tile_point(_state.ship_hitbox.center());
+
+		// https://stackoverflow.com/a/1555236/9473815
+
+		int x, y, dx, dy;
+		x = y = dx = 0;
+		dy = -1;
+		int t = bn::max(size.x(), size.y());
+		int max_i = t * t;
+
+		int range = 32;
+
+		for (int i = 0; i < max_i; i++) {
+			if (
+					(-size.x() / 2 <= x) && (x <= size.x() / 2) //
+					&& (-size.y() / 2 <= y && y <= size.y() / 2)) {
+				// draw
+
+				auto tile_point = bn::point(ship_pos.x() + x, ship_pos.y() + y);
+				auto plot_point = bn::point(size.x() / 2 + x * 2, size.y() / 2 + y * 2);
+
+				if (plot_point.x() < size.x() && plot_point.y() < size.y() && plot_point.x() >= 0 && plot_point.y() >= 0) {
+					auto dist = helpers::distance(ship_pos, tile_point);
+
+					bn::fixed noise = 0;
+					if ((helpers::posmod(tile_point.x(), 2) == 0) != (helpers::posmod(tile_point.y(), 2) == 0)) {
+						noise = _rng.get_bool() ? 0.3 : 0.2;
+					} else {
+						noise = _rng.get_bool() ? 0.6 : 0.0;
+					}
+
+					auto opacity = bn::clamp(helpers::remap_fixed(dist, range / 3, range, 0.1, 1) + noise, bn::fixed(0), bn::fixed(1));
+
+					if (i == 0) {
+						painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
+								bn::color(4, 31, 4));
+					} else if (_state.is_solid_tile(tile_point)) {
+						auto color = helpers::lerp_color(bn::color(10, 0, 10), bn::color(0, 0, 0), opacity);
+						auto highlight = helpers::lerp_color(bn::color(31, 8, 31), bn::color(0, 0, 0), opacity);
+
+						bool top = _state.is_solid_tile(tile_point + bn::point(0, -1));
+						bool left = _state.is_solid_tile(tile_point + bn::point(-1, 0));
+						bool right = _state.is_solid_tile(tile_point + bn::point(1, 0));
+						bool bottom = _state.is_solid_tile(tile_point + bn::point(0, 1));
+
+						painter.plot(plot_point.x(), plot_point.y(), !top || !left ? highlight : color);
+						painter.plot(plot_point.x() + 1, plot_point.y(), !top || !right ? highlight : color);
+						painter.plot(plot_point.x(), plot_point.y() + 1, !bottom || !left ? highlight : color);
+						painter.plot(plot_point.x() + 1, plot_point.y() + 1, !bottom || !right ? highlight : color);
+
+					} else {
+						painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
+								helpers::lerp_color(bn::color(1, 1, 3), bn::color(0, 0, 0), opacity));
+					}
+				}
+			}
+
+			if (x == y) {
+				painter.flip_page_now();
+				bn::core::update();
+				if (bn::keypad::start_released()) {
+					break;
+				}
+				painter.flip_page_now();
+			}
+
+			if (x == y || ((x < 0 && (x == -y)) || ((x > 0) && (x == 1 - y)))) {
+				t = dx;
+				dx = -dy;
+				dy = t;
+			}
+			x += dx;
+			y += dy;
+		}
+
+		painter.flip_page_now();
+	}
+}
+
+void mining_scene::_update_overlay_text() {
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+	_small_text.set_bg_priority(0);
+	_text_sprites.clear();
+
+	int index = 0;
+	int item_frame = _state.item_queue_frame();
+
+	bn::string<15> text;
+	bn::ostringstream text_stream(text);
+
+	for (auto it = _state.item_pickup_queue.begin(); it != _state.item_pickup_queue.end(); ++it) {
+		auto &obj = *it;
+
+		text.clear();
+		text_stream.append("+");
+		text_stream.append(obj.amount);
+		text_stream.append(" ");
+		append_item_name(text_stream, obj.object_type);
+
+		auto y = bn::clamp((mining_state::ITEM_QUEUE_FRAMES_TIME - (obj.frame - item_frame)) / 4, 0, 4);
+
+		_small_text.generate(118, 80 - index * 9 - y, text, _text_sprites);
+
+		index++;
+	}
+}
+
+} //namespace game

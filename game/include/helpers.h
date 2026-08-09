@@ -167,5 +167,35 @@ public:
 		}
 		stream.append(num);
 	}
+
+	static inline int tile_pos_to_index(int p_x, int p_y, int p_columns) {
+		return p_x + p_y * p_columns;
+	}
+
+	static inline int relative_tile_index(int p_from_index, int p_x, int p_y, int p_tileset_columns) {
+		return p_from_index + p_x + p_y * p_tileset_columns;
+	}
+
+	static inline bool is_point_in_view(bn::fixed_point camera_pos, bn::fixed_point point, bn::fixed size) {
+		// assuming gba screen size here
+		bn::fixed left = camera_pos.x() - 120;
+		bn::fixed right = camera_pos.x() + 120;
+		bn::fixed top = camera_pos.y() - 80;
+		bn::fixed bottom = camera_pos.y() + 80;
+
+		if (point.x() + size < left) {
+			return false;
+		}
+		if (point.x() > right) {
+			return false;
+		}
+		if (point.y() + size < top) {
+			return false;
+		}
+		if (point.y() > bottom) {
+			return false;
+		}
+		return true;
+	}
 };
 } //namespace game
