@@ -65,7 +65,7 @@ mining_scene::~mining_scene() {
 bn::optional<scene_type> mining_scene::update() {
 	bn::optional<scene_type> result;
 
-	if (_pause_type == mining_pause_menu_type::NONE) {
+	if (_pause_tab == pause_menu_tab::NONE) {
 		_update_space();
 		_update_overlay_text();
 
@@ -101,7 +101,7 @@ void mining_scene::_pause(bool p_show_radar) {
 		_obj_sprites.at(i).set_visible(false);
 	}
 
-	_pause_type = p_show_radar ? mining_pause_menu_type::SCANNER : mining_pause_menu_type::INVENTORY;
+	_pause_tab = p_show_radar ? pause_menu_tab::SCANNER : pause_menu_tab::INVENTORY;
 }
 
 void mining_scene::_unpause() {
@@ -150,24 +150,30 @@ void mining_scene::_unpause() {
 	_crosshair_sprite.set_visible(true);
 	_bg_bg->set_visible(true);
 
-	_pause_type = mining_pause_menu_type::NONE;
+	_pause_tab = pause_menu_tab::NONE;
 }
 
 inline bool _has_flags(unsigned short value, unsigned short mask) {
 	return (value & mask) == mask;
 }
 
-void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material) {
+void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level) {
 	const int tileset_columns = 32;
 
 	const int solid_offsets[3] = { tileset_columns, tileset_columns + 1, 0 };
 
 	int corner_ids[4] = { 0, 0, 0, 0 };
+	int corner_palette[4] = { p_light_level, p_light_level, p_light_level, p_light_level };
 	bool corner_flip_v[4] = { false, false, false, false };
 	bool corner_flip_h[4] = { false, false, false, false };
 
 	if (p_material == tile_material::AIR) {
 		// leave the index on 0
+	} else if (p_light_level == 3) {
+		corner_ids[0] = tileset_columns;
+		corner_ids[1] = tileset_columns;
+		corner_ids[2] = tileset_columns;
+		corner_ids[3] = tileset_columns;
 	} else {
 		_rng.set_seed(seed);
 
@@ -245,12 +251,21 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 		for (size_t i = 0; i < 4; i++) {
 			auto s = corner_ids[i];
 
+			// tiles that randomize vertical flip
 			if (s == 0 || s == 1) {
 				corner_flip_v[i] = _rng.get_bool();
 			}
+
+			// tiles that randomize horizontal flip
 			if (s == 0 || s % tileset_columns == 3) {
 				corner_flip_h[i] = _rng.get_bool();
 			}
+
+			// tiles that randomize light level
+			if (s == 0) {
+				corner_palette[i] = bn::min(3, corner_palette[i] + _rng.get_int() % (corner_palette[i] + 2));
+			}
+
 			if (s == 0) {
 				auto rand_offset = _rng.get_int(p_material == tile_material::ROCK || p_material == tile_material::BEDROCK ? 2 : 3);
 				s = solid_offsets[rand_offset];
@@ -277,15 +292,15 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 	bn::regular_bg_map_cell_info bottom_right_info(bottom_right);
 
 	if (p_material == tile_material::BEDROCK) {
-		top_left_info.set_palette_id(1);
-		top_right_info.set_palette_id(1);
-		bottom_left_info.set_palette_id(1);
-		bottom_right_info.set_palette_id(1);
+		top_left_info.set_palette_id(2);
+		top_right_info.set_palette_id(2);
+		bottom_left_info.set_palette_id(2);
+		bottom_right_info.set_palette_id(2);
 	} else {
-		top_left_info.set_palette_id(0);
-		top_right_info.set_palette_id(0);
-		bottom_left_info.set_palette_id(0);
-		bottom_right_info.set_palette_id(0);
+		top_left_info.set_palette_id(corner_palette[0]);
+		top_right_info.set_palette_id(corner_palette[1]);
+		bottom_left_info.set_palette_id(corner_palette[2]);
+		bottom_right_info.set_palette_id(corner_palette[3]);
 	}
 
 	top_left_info.set_tile_index(corner_ids[0]);
@@ -309,6 +324,66 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 	bottom_right = bottom_right_info.cell();
 }
 
+// 3 3 3 2 3 3 3
+// 3 3 2 1 2 3 3
+// 3 2 1 0 1 2 3
+// 2 1 0 x 0 1 2
+// 3 2 1 0 1 2 3
+// 3 3 2 1 2 3 3
+// 3 3 3 2 3 3 3
+
+static const bn::point _light_circles[]{
+	// 0
+	{ 0, -1 },
+	{ 1, 0 },
+	{ 0, 1 },
+	{ -1, 0 },
+	// 1
+	{ 0, -2 },
+	{ 1, -1 },
+	{ 2, 0 },
+	{ 1, 1 },
+	{ 0, 2 },
+	{ -1, 1 },
+	{ -2, 0 },
+	{ -1, -1 },
+	// 2
+	{ 0, -3 },
+	{ 1, -2 },
+	{ 2, -1 },
+	{ 3, 0 },
+	{ 2, 1 },
+	{ 1, 2 },
+	{ 0, 3 },
+	{ -1, 2 },
+	{ -2, 1 },
+	{ -3, 0 },
+	{ -2, -1 },
+	{ -1, -2 },
+};
+
+static const int _light_circle_lengths[]{
+	4,
+	8,
+	12
+};
+
+unsigned char mining_scene::_calc_tile_light_level(bn::point p_tile_pos) {
+	unsigned char light_level = 0;
+	int i = 0;
+	for (; light_level < 3; light_level++) {
+		auto end = i + _light_circle_lengths[light_level];
+
+		for (; i < end; i++) {
+			auto p = _light_circles[i];
+			if (!_state.is_solid_tile(p_tile_pos + p)) {
+				return light_level;
+			}
+		}
+	}
+	return 3;
+}
+
 void mining_scene::_update_tilemap() {
 	_tilemap_bg->set_position(
 			_tilemap_loaded_point * mining_state::TILEMAP_LOAD_STRIDE_PX);
@@ -330,7 +405,7 @@ void mining_scene::_update_tilemap() {
 					mining_state::SPACE_TILE_WIDTH);
 
 			if (tile.material == tile_material::AIR) {
-				_set_tilemap_tile(seed, x, y, 0, tile.material);
+				_set_tilemap_tile(seed, x, y, 0, tile.material, 0);
 				continue;
 			}
 
@@ -371,7 +446,12 @@ void mining_scene::_update_tilemap() {
 				flag |= tile_flags::BOTTOM_RIGHT;
 			}
 
-			_set_tilemap_tile(seed, x, y, flag, tile.material);
+			unsigned char light_level = 0;
+			if (flag != 0) {
+				light_level = _calc_tile_light_level(bn::point(px, py));
+			}
+
+			_set_tilemap_tile(seed, x, y, flag, tile.material, light_level);
 		}
 	}
 
@@ -515,13 +595,13 @@ void mining_scene::_update_space() {
 }
 
 void mining_scene::_update_pause_menu() {
-	int type_index = static_cast<int>(_pause_type);
-	constexpr int max_type = static_cast<int>(mining_pause_menu_type::SYSTEM);
+	int type_index = static_cast<int>(_pause_tab);
+	constexpr int max_type = static_cast<int>(pause_menu_tab::SYSTEM);
 
 	if (type_index > 1 && bn::keypad::l_released()) {
-		_pause_type = static_cast<mining_pause_menu_type>(type_index - 1);
+		_pause_tab = static_cast<pause_menu_tab>(type_index - 1);
 	} else if (type_index < max_type && bn::keypad::r_released()) {
-		_pause_type = static_cast<mining_pause_menu_type>(type_index + 1);
+		_pause_tab = static_cast<pause_menu_tab>(type_index + 1);
 	}
 
 	bn::string<40> text;
@@ -529,7 +609,7 @@ void mining_scene::_update_pause_menu() {
 
 	_text_sprites.clear();
 
-	if (_pause_type == mining_pause_menu_type::INVENTORY) {
+	if (_pause_tab == pause_menu_tab::INVENTORY) {
 		if (!_pause_ship_sprite.has_value()) {
 			_pause_ship_sprite = bn::sprite_items::ship2x.create_sprite();
 		}
@@ -556,7 +636,7 @@ void mining_scene::_update_pause_menu() {
 		}
 	}
 
-	if (_pause_type == mining_pause_menu_type::SCANNER) {
+	if (_pause_tab == pause_menu_tab::SCANNER) {
 		bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
 
 		if (!_scan_map_bg.has_value()) {
@@ -682,7 +762,7 @@ void mining_scene::_update_pause_menu() {
 
 	text.clear();
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	append_pause_menu_name(text_stream, _pause_type);
+	append_pause_menu_name(text_stream, _pause_tab);
 	_small_text.generate(0, -74, text, _text_sprites);
 
 	text.clear();
@@ -695,7 +775,7 @@ void mining_scene::_update_pause_menu() {
 	}
 	_small_text.generate(0, -64, text, _text_sprites);
 
-	if (_pause_type == mining_pause_menu_type::SYSTEM) {
+	if (_pause_tab == pause_menu_tab::SYSTEM) {
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 		text.clear();

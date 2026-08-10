@@ -9,8 +9,8 @@
 #include "scenes/scene.h"
 #include "scenes/scene_type.h"
 
-#include "scenes/main_menu_scene.h"
 #include "scenes/mining_scene.h"
+#include "scenes/ship_scene.h"
 #include "scenes/splash_scene.h"
 
 #include "tests.h"
@@ -25,7 +25,6 @@ int main() {
 	bn::optional<game::scene_type> next_scene_type = game::scene_type::MINING;
 
 	bn::unique_ptr<game::shared_state> shared_state(new game::shared_state());
-
 	bn::unique_ptr<game::mining_state> mining_state(new game::mining_state(*shared_state));
 
 	// main loop
@@ -46,6 +45,8 @@ int main() {
 					// case game::scene_type::MAIN_MENU:
 					// 	current_scene.reset(new game::main_menu_scene(*shared));
 					// 	break;
+					case game::scene_type::SHIP:
+						current_scene.reset(new game::ship_scene(*shared_state));
 					case game::scene_type::MINING:
 						current_scene.reset(new game::mining_scene(*shared_state, *mining_state));
 					default:

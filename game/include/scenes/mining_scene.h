@@ -28,23 +28,6 @@
 
 namespace game {
 
-enum class mining_pause_menu_type {
-	NONE,
-	SCANNER,
-	INVENTORY,
-	SYSTEM
-};
-
-inline void append_pause_menu_name(bn::ostringstream &stream, mining_pause_menu_type p_menu_type) {
-	if (p_menu_type == mining_pause_menu_type::SCANNER) {
-		stream.append("SCANNER");
-	} else if (p_menu_type == mining_pause_menu_type::INVENTORY) {
-		stream.append("INVENTORY");
-	} else if (p_menu_type == mining_pause_menu_type::SYSTEM) {
-		stream.append("SYSTEM");
-	}
-}
-
 class mining_scene : public scene {
 public:
 	explicit mining_scene(shared_state &p_shared, mining_state &p_state);
@@ -52,9 +35,30 @@ public:
 	[[nodiscard]] bn::optional<scene_type> update() final;
 
 private:
+	enum class pause_menu_tab {
+		NONE,
+		SCANNER,
+		INVENTORY,
+		SYSTEM
+	};
+
+	inline void append_pause_menu_name(bn::ostringstream &stream, pause_menu_tab p_menu_type) {
+		if (p_menu_type == pause_menu_tab::SCANNER) {
+			stream.append("SCANNER");
+		} else if (p_menu_type == pause_menu_tab::INVENTORY) {
+			stream.append("INVENTORY");
+		} else if (p_menu_type == pause_menu_tab::SYSTEM) {
+			stream.append("SYSTEM");
+		}
+	}
+
+	enum class pause_menu_option {
+
+	};
+
 	mining_state &_state;
 
-	mining_pause_menu_type _pause_type;
+	pause_menu_tab _pause_tab;
 	bn::optional<bn::sprite_ptr> _pause_ship_sprite;
 
 	bn::sprite_text_generator _small_text;
@@ -100,6 +104,7 @@ private:
 	void _destroy_bgs();
 
 	void _update_tilemap();
-	void _set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material);
+	unsigned char _calc_tile_light_level(bn::point p_tile_pos);
+	void _set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level);
 };
 } //namespace game
