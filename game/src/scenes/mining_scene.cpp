@@ -13,6 +13,7 @@
 #include "bn_sprite_items_dev8.h"
 #include "bn_sprite_items_dropped_items.h"
 #include "bn_sprite_items_ship.h"
+#include "bn_sprite_items_ship2x.h"
 
 namespace game {
 
@@ -23,15 +24,8 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		_camera(bn::camera_ptr::create(0, 0)),
 		_rng(1),
 		_tilemap_item(_tilemap_cells[0], bn::size(mining_state::TILEMAP_CELLS_SIZE, mining_state::TILEMAP_CELLS_SIZE)),
-		_ship_sprite(bn::sprite_items::ship.create_sprite()),
 		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
 		_crosshair_sprite(bn::sprite_items::crosshair.create_sprite()) {
-	_ship_sprite.set_visible(false);
-
-	_ship_sprite.set_camera(_camera);
-	_ship_sprite.set_bg_priority(0);
-	_ship_sprite.set_position(_state.ship_hitbox.position());
-
 	_breaking_sprite.set_camera(_camera);
 	_breaking_sprite.set_visible(false);
 	_breaking_sprite.set_bg_priority(0);
@@ -84,7 +78,7 @@ bn::optional<scene_type> mining_scene::update() {
 	} else {
 		_update_pause_menu();
 
-		if (bn::keypad::start_released()) {
+		if (bn::keypad::start_released() || bn::keypad::b_released() || bn::keypad::select_released()) {
 			_unpause();
 		}
 	}
@@ -100,18 +94,20 @@ void mining_scene::_pause(bool p_show_radar) {
 	_ship_laser.reset();
 	_bg_bg.reset();
 	_tilemap_bg.reset();
-	_ship_sprite.set_visible(false);
+	_ship_sprite.reset();
 	_crosshair_sprite.set_visible(false);
 
 	for (int i = 0; i < _obj_sprites.size(); i++) {
 		_obj_sprites.at(i).set_visible(false);
 	}
 
-	_pause_type = p_show_radar ? mining_pause_menu_type::RADAR : mining_pause_menu_type::RESOURCES;
+	_pause_type = p_show_radar ? mining_pause_menu_type::SCANNER : mining_pause_menu_type::INVENTORY;
 }
 
 void mining_scene::_unpause() {
+	// cleanup
 	_scan_map_bg.reset();
+	_pause_ship_sprite.reset();
 
 	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 3));
 
@@ -146,7 +142,11 @@ void mining_scene::_unpause() {
 	_ship_laser->set_wrapping_enabled(false);
 	_ship_laser->set_pivot_position(bn::point(0, 64));
 
-	_ship_sprite.set_visible(true);
+	_ship_sprite = bn::sprite_items::ship.create_sprite();
+	_ship_sprite->set_camera(_camera);
+	_ship_sprite->set_bg_priority(0);
+	_ship_sprite->set_position(_state.ship_hitbox.position());
+
 	_crosshair_sprite.set_visible(true);
 	_bg_bg->set_visible(true);
 
@@ -382,10 +382,10 @@ void mining_scene::_update_tilemap() {
 void mining_scene::_update_space() {
 	_state.update();
 
-	_ship_sprite.set_tiles(bn::sprite_items::ship.tiles_item()
+	_ship_sprite->set_tiles(bn::sprite_items::ship.tiles_item()
 					.create_tiles(((_state.ship_rotation / bn::fixed(360.0)) * 32).integer() % 32));
 
-	_ship_sprite.set_position(_state.ship_hitbox.position());
+	_ship_sprite->set_position(_state.ship_hitbox.position());
 	_ship_laser->set_position(_state.ship_hitbox.position());
 
 	const bn::fixed max_dist = 64;
@@ -515,116 +515,200 @@ void mining_scene::_update_space() {
 }
 
 void mining_scene::_update_pause_menu() {
-	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	int type_index = static_cast<int>(_pause_type);
+	constexpr int max_type = static_cast<int>(mining_pause_menu_type::SYSTEM);
+
+	if (type_index > 1 && bn::keypad::l_released()) {
+		_pause_type = static_cast<mining_pause_menu_type>(type_index - 1);
+	} else if (type_index < max_type && bn::keypad::r_released()) {
+		_pause_type = static_cast<mining_pause_menu_type>(type_index + 1);
+	}
+
+	bn::string<40> text;
+	bn::ostringstream text_stream(text);
+
 	_text_sprites.clear();
 
-	bn::string<32> text;
-	bn::ostringstream text_stream(text);
-	// text.append("<<  [ RESOURCES ]  >>");
-	text.append("<<  [ RADAR ]  >>");
-	_small_text.generate(0, -72, text, _text_sprites);
-
-	// _state.small_fixed_text_generator.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
-
-	// for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
-	// 	auto typ = static_cast<obj_type>(i);
-
-	// 	text.clear();
-	// 	helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
-	// 	text_stream.append(" ");
-	// 	append_item_name(text_stream, typ);
-
-	// 	_state.small_fixed_text_generator.generate(-80, -40 + i * 9, text, _text_sprites);
-	// }
-
-	bn::core::update();
-
-	if (!_scan_map_bg.has_value()) {
-		_scan_map_bg = bn::dp_direct_bitmap_bg_ptr::create();
-		bn::dp_direct_bitmap_bg_painter painter(_scan_map_bg.value());
-
-		painter.fill(bn::color(0, 0, 0));
-		painter.flip_page_now();
-		bn::core::update();
-		painter.flip_page_now();
-
-		bn::point size = bn::point(160, 128);
-		bn::point ship_pos = _state.space_point_to_tile_point(_state.ship_hitbox.center());
-
-		// https://stackoverflow.com/a/1555236/9473815
-
-		int x, y, dx, dy;
-		x = y = dx = 0;
-		dy = -1;
-		int t = bn::max(size.x(), size.y());
-		int max_i = t * t;
-
-		int range = 32;
-
-		for (int i = 0; i < max_i; i++) {
-			if (
-					(-size.x() / 2 <= x) && (x <= size.x() / 2) //
-					&& (-size.y() / 2 <= y && y <= size.y() / 2)) {
-				// draw
-
-				auto tile_point = bn::point(ship_pos.x() + x, ship_pos.y() + y);
-				auto plot_point = bn::point(size.x() / 2 + x * 2, size.y() / 2 + y * 2);
-
-				if (plot_point.x() < size.x() && plot_point.y() < size.y() && plot_point.x() >= 0 && plot_point.y() >= 0) {
-					auto dist = helpers::distance(ship_pos, tile_point);
-
-					bn::fixed noise = 0;
-					if ((helpers::posmod(tile_point.x(), 2) == 0) != (helpers::posmod(tile_point.y(), 2) == 0)) {
-						noise = _rng.get_bool() ? 0.3 : 0.2;
-					} else {
-						noise = _rng.get_bool() ? 0.6 : 0.0;
-					}
-
-					auto opacity = bn::clamp(helpers::remap_fixed(dist, range / 3, range, 0.1, 1) + noise, bn::fixed(0), bn::fixed(1));
-
-					if (i == 0) {
-						painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
-								bn::color(4, 31, 4));
-					} else if (_state.is_solid_tile(tile_point)) {
-						auto color = helpers::lerp_color(bn::color(10, 0, 10), bn::color(0, 0, 0), opacity);
-						auto highlight = helpers::lerp_color(bn::color(31, 8, 31), bn::color(0, 0, 0), opacity);
-
-						bool top = _state.is_solid_tile(tile_point + bn::point(0, -1));
-						bool left = _state.is_solid_tile(tile_point + bn::point(-1, 0));
-						bool right = _state.is_solid_tile(tile_point + bn::point(1, 0));
-						bool bottom = _state.is_solid_tile(tile_point + bn::point(0, 1));
-
-						painter.plot(plot_point.x(), plot_point.y(), !top || !left ? highlight : color);
-						painter.plot(plot_point.x() + 1, plot_point.y(), !top || !right ? highlight : color);
-						painter.plot(plot_point.x(), plot_point.y() + 1, !bottom || !left ? highlight : color);
-						painter.plot(plot_point.x() + 1, plot_point.y() + 1, !bottom || !right ? highlight : color);
-
-					} else {
-						painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
-								helpers::lerp_color(bn::color(1, 1, 3), bn::color(0, 0, 0), opacity));
-					}
-				}
-			}
-
-			if (x == y) {
-				painter.flip_page_now();
-				bn::core::update();
-				if (bn::keypad::start_released()) {
-					break;
-				}
-				painter.flip_page_now();
-			}
-
-			if (x == y || ((x < 0 && (x == -y)) || ((x > 0) && (x == 1 - y)))) {
-				t = dx;
-				dx = -dy;
-				dy = t;
-			}
-			x += dx;
-			y += dy;
+	if (_pause_type == mining_pause_menu_type::INVENTORY) {
+		if (!_pause_ship_sprite.has_value()) {
+			_pause_ship_sprite = bn::sprite_items::ship2x.create_sprite();
 		}
 
-		painter.flip_page_now();
+		_pause_ship_sprite->set_position(48, 0);
+		_pause_ship_sprite->set_tiles(bn::sprite_items::ship2x.tiles_item()
+						.create_tiles((_frame / 6) % 32));
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+		for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
+			auto typ = static_cast<obj_type>(i);
+
+			text.clear();
+			helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
+			text_stream.append(" ");
+			append_item_name(text_stream, typ);
+
+			_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+		}
+	} else {
+		if (_pause_ship_sprite.has_value()) {
+			_pause_ship_sprite.reset();
+		}
+	}
+
+	if (_pause_type == mining_pause_menu_type::SCANNER) {
+		bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+
+		if (!_scan_map_bg.has_value()) {
+			text.clear();
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+			text_stream.append("SCANNING...");
+			_small_text.generate(0, 70, text, _text_sprites);
+
+			bn::core::update();
+
+			_scan_map_bg = bn::dp_direct_bitmap_bg_ptr::create();
+			bn::dp_direct_bitmap_bg_painter painter(_scan_map_bg.value());
+
+			painter.fill(bn::color(0, 0, 0));
+			painter.flip_page_now();
+			bn::core::update();
+			painter.flip_page_now();
+
+			bn::point size = bn::point(160, 128);
+			bn::point ship_pos = _state.space_point_to_tile_point(_state.ship_hitbox.center());
+
+			// https://stackoverflow.com/a/1555236/9473815
+
+			int x, y, dx, dy;
+			x = y = dx = 0;
+			dy = -1;
+			int t = bn::max(size.x(), size.y());
+			int max_i = t * t;
+
+			int range = 32;
+
+			for (int i = 0; i < max_i; i++) {
+				if (
+						(-size.x() / 2 <= x) && (x <= size.x() / 2) //
+						&& (-size.y() / 2 <= y && y <= size.y() / 2)) {
+					// draw
+
+					auto tile_point = bn::point(ship_pos.x() + x, ship_pos.y() + y);
+					auto plot_point = bn::point(size.x() / 2 + x * 2, size.y() / 2 + y * 2);
+
+					if (plot_point.x() < size.x() && plot_point.y() < size.y() && plot_point.x() >= 0 && plot_point.y() >= 0) {
+						auto dist = helpers::distance(ship_pos, tile_point);
+
+						bn::fixed noise = 0;
+						if ((helpers::posmod(tile_point.x(), 2) == 0) != (helpers::posmod(tile_point.y(), 2) == 0)) {
+							noise = _rng.get_bool() ? 0.3 : 0.2;
+						} else {
+							noise = _rng.get_bool() ? 0.6 : 0.0;
+						}
+
+						auto opacity = bn::clamp(helpers::remap_fixed(dist, range / 3, range, 0.1, 1) + noise, bn::fixed(0), bn::fixed(1));
+
+						if (i == 0) {
+							painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
+									bn::color(4, 31, 4));
+						} else if (_state.is_solid_tile(tile_point)) {
+							auto color = helpers::lerp_color(bn::color(10, 0, 10), bn::color(0, 0, 0), opacity);
+							auto highlight = helpers::lerp_color(bn::color(31, 8, 31), bn::color(0, 0, 0), opacity);
+
+							bool top = _state.is_solid_tile(tile_point + bn::point(0, -1));
+							bool left = _state.is_solid_tile(tile_point + bn::point(-1, 0));
+							bool right = _state.is_solid_tile(tile_point + bn::point(1, 0));
+							bool bottom = _state.is_solid_tile(tile_point + bn::point(0, 1));
+
+							painter.plot(plot_point.x(), plot_point.y(), !top || !left ? highlight : color);
+							painter.plot(plot_point.x() + 1, plot_point.y(), !top || !right ? highlight : color);
+							painter.plot(plot_point.x(), plot_point.y() + 1, !bottom || !left ? highlight : color);
+							painter.plot(plot_point.x() + 1, plot_point.y() + 1, !bottom || !right ? highlight : color);
+
+						} else {
+							painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
+									helpers::lerp_color(bn::color(1, 1, 3), bn::color(0, 0, 0), opacity));
+						}
+					}
+				}
+
+				if (x == y) {
+					// todo i can't get this to work...
+					// if (bn::keypad::any_released()) {
+					// 	bn::core::update();
+					// 	_unpause();
+					// 	return;
+					// }
+
+					painter.flip_page_now();
+					bn::core::update();
+					painter.flip_page_now();
+				}
+
+				if (x == y || ((x < 0 && (x == -y)) || ((x > 0) && (x == 1 - y)))) {
+					t = dx;
+					dx = -dy;
+					dy = t;
+				}
+				x += dx;
+				y += dy;
+			}
+
+			painter.flip_page_now();
+		} else {
+			_scan_map_bg->set_visible(true);
+		}
+	} else {
+		bn::bg_palettes::set_transparent_color(bn::color(0, 1, 3));
+
+		if (_scan_map_bg.has_value()) {
+			_scan_map_bg->set_visible(false);
+		}
+	}
+
+	text.clear();
+	if (type_index > 1) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+		text.append("L<");
+		_small_text.generate(-100, -72, text, _text_sprites);
+	}
+	if (type_index < max_type) {
+		text.clear();
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+		text.append(">R");
+		_small_text.generate(100, -72, text, _text_sprites);
+	}
+
+	text.clear();
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	append_pause_menu_name(text_stream, _pause_type);
+	_small_text.generate(0, -74, text, _text_sprites);
+
+	text.clear();
+	for (int i = 1; i <= max_type; i++) {
+		if (i == type_index) {
+			text.append("@");
+		} else {
+			text.append("*");
+		}
+	}
+	_small_text.generate(0, -64, text, _text_sprites);
+
+	if (_pause_type == mining_pause_menu_type::SYSTEM) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+		text.clear();
+		text.append("> CONTROLS");
+		_small_text.generate(-64, -40, text, _text_sprites);
+
+		text.clear();
+		text.append("> MUSIC [OFF]");
+		_small_text.generate(-64, -30, text, _text_sprites);
+
+		text.clear();
+		text.append("> ABANDON DRONE");
+		_small_text.generate(-64, -10, text, _text_sprites);
 	}
 }
 

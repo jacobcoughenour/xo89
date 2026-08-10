@@ -30,9 +30,20 @@ namespace game {
 
 enum class mining_pause_menu_type {
 	NONE,
-	RESOURCES,
-	RADAR
+	SCANNER,
+	INVENTORY,
+	SYSTEM
 };
+
+inline void append_pause_menu_name(bn::ostringstream &stream, mining_pause_menu_type p_menu_type) {
+	if (p_menu_type == mining_pause_menu_type::SCANNER) {
+		stream.append("SCANNER");
+	} else if (p_menu_type == mining_pause_menu_type::INVENTORY) {
+		stream.append("INVENTORY");
+	} else if (p_menu_type == mining_pause_menu_type::SYSTEM) {
+		stream.append("SYSTEM");
+	}
+}
 
 class mining_scene : public scene {
 public:
@@ -44,6 +55,7 @@ private:
 	mining_state &_state;
 
 	mining_pause_menu_type _pause_type;
+	bn::optional<bn::sprite_ptr> _pause_ship_sprite;
 
 	bn::sprite_text_generator _small_text;
 
@@ -62,7 +74,7 @@ private:
 	bn::optional<bn::regular_bg_ptr> _tilemap_bg;
 	bn::point _tilemap_loaded_point;
 
-	bn::sprite_ptr _ship_sprite;
+	bn::optional<bn::sprite_ptr> _ship_sprite;
 	bn::vector<bn::sprite_ptr, 3> _ship_thrust_particles;
 
 	bn::optional<bn::affine_bg_ptr> _ship_laser;

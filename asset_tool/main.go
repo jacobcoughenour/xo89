@@ -35,6 +35,8 @@ func createShipSprites() error {
 
 	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 32, Y: 32 * total_frames}})
 	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+	canvas2x := image.NewRGBA(image.Rectangle{Max: image.Point{X: 64, Y: 64 * total_frames}})
+	draw.Draw(canvas2x, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
 
 	for i := range total_frames {
 
@@ -51,9 +53,19 @@ func createShipSprites() error {
 			scaled,
 			image.Point{0, 0},
 			draw.Over)
+
+		scaled2x := transform.Resize(img, 64, 64, transform.NearestNeighbor)
+
+		draw.Draw(
+			canvas2x,
+			image.Rect(0, i*64, 128, 64+i*64),
+			scaled2x,
+			image.Point{0, 0},
+			draw.Over)
 	}
 
 	processed := reducedToPaletted(canvas, nil)
+	processed2x := reducedToPaletted(canvas2x, nil)
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -64,6 +76,18 @@ func createShipSprites() error {
 		return err
 	}
 	if err := bmp.Encode(f, processed); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	f, err = os.Create(filepath.Join(cwd, "../game/graphics/ship2x.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed2x); err != nil {
 		f.Close()
 		return err
 	}
