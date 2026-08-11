@@ -407,14 +407,14 @@ void mining_scene::_update_space() {
 	_state.update();
 
 	_ship_sprite->set_tiles(bn::sprite_items::ship.tiles_item()
-					.create_tiles(((_state.ship_rotation / bn::fixed(360.0)) * 32).integer() % 32));
+					.create_tiles((((_state.ship_rotation / bn::fixed(360.0)) * 32 - 0.5).integer() + 32) % 32));
 
 	_ship_sprite->set_position(_state.ship_hitbox.position());
 	_ship_laser->set_position(_state.ship_hitbox.position());
 
 	const bn::fixed max_dist = 64;
 
-	auto targetting_hit = _state.raycast(_state.ship_hitbox.center(), -helpers::angle_to_dir(-_state.ship_rotation + 8), max_dist);
+	auto targetting_hit = _state.raycast(_state.ship_hitbox.center(), -helpers::angle_to_dir(-_state.ship_rotation), max_dist);
 	auto target_dir = -helpers::set_length(helpers::angle_to_dir(-_state.ship_rotation), max_dist - 4.0);
 
 	if (targetting_hit.has_value()) {
