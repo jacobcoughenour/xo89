@@ -104,7 +104,6 @@ private:
 	void _destroy_bgs();
 
 	void _update_tilemap();
-	unsigned char _calc_tile_light_level(bn::point p_tile_pos);
 	void _set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level);
 };
 } //namespace game

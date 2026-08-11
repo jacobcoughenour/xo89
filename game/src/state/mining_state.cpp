@@ -87,6 +87,96 @@ bool mining_state::is_generated() {
 	return _chunks_generated == MAX_CHUNKS;
 }
 
+// 3 3 3 2 3 3 3
+// 3 3 2 1 2 3 3
+// 3 2 1 0 1 2 3
+// 2 1 0 x 0 1 2
+// 3 2 1 0 1 2 3
+// 3 3 2 1 2 3 3
+// 3 3 3 2 3 3 3
+
+static const bn::point _light_circles[]{
+	// 0
+	{ 0, -1 },
+	{ 1, 0 },
+	{ 0, 1 },
+	{ -1, 0 },
+	// 1
+	{ 0, -2 },
+	{ 1, -1 },
+	{ 2, 0 },
+	{ 1, 1 },
+	{ 0, 2 },
+	{ -1, 1 },
+	{ -2, 0 },
+	{ -1, -1 },
+	// 2
+	{ 0, -3 },
+	{ 1, -2 },
+	{ 2, -1 },
+	{ 3, 0 },
+	{ 2, 1 },
+	{ 1, 2 },
+	{ 0, 3 },
+	{ -1, 2 },
+	{ -2, 1 },
+	{ -3, 0 },
+	{ -2, -1 },
+	{ -1, -2 },
+};
+
+static const int _light_circle_lengths[]{
+	4,
+	8,
+	12
+};
+
+unsigned char mining_state::_calc_tile_light_level(bn::point p_tile_pos) {
+	unsigned char light_level = 0;
+	int i = 0;
+	for (; light_level < 3; light_level++) {
+		auto end = i + _light_circle_lengths[light_level];
+		for (; i < end; i++) {
+			auto p = _light_circles[i];
+			if (!is_solid_tile(p_tile_pos + p)) {
+				return light_level;
+			}
+		}
+	}
+	return 3;
+}
+
+void mining_state::bake_lighting() {
+	for (int y = 0; y < SPACE_TILE_WIDTH; y++) {
+		for (int x = 0; x < SPACE_TILE_WIDTH; x++) {
+			auto light = _calc_tile_light_level(bn::point(x, y));
+			if (light > 0) {
+				int index = helpers::tile_pos_to_index(
+						x,
+						y,
+						SPACE_TILE_WIDTH);
+				auto data = _unpack_tile_data(_tile_cells[index]);
+				data.light_level = light;
+				_tile_cells[index] = _pack_tile_data(data);
+			}
+		}
+	}
+}
+
+void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
+	for (auto p : _light_circles) {
+		auto relative = p_tile_pos + p;
+		auto light = _calc_tile_light_level(relative);
+		int index = helpers::tile_pos_to_index(
+				relative.x(),
+				relative.y(),
+				SPACE_TILE_WIDTH);
+		auto data = _unpack_tile_data(_tile_cells[index]);
+		data.light_level = light;
+		_tile_cells[index] = _pack_tile_data(data);
+	}
+}
+
 bn::fixed_point mining_state::spawn_point() {
 	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2 + 8, 0);
 }
@@ -199,6 +289,8 @@ void mining_state::set_tile_material(bn::point p_tile_point, tile_material p_til
 	d.material = p_tile_material;
 
 	_tile_cells[index] = _pack_tile_data(d);
+
+	_recalculate_lighting(p_tile_point);
 
 	// todo should only mark dirty when close to the camera?
 	is_tileset_dirty = true;

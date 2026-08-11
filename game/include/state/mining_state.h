@@ -93,11 +93,14 @@ private:
 	bn::seed_random _rng;
 	int _chunks_generated;
 	alignas(packed_tile_data) packed_tile_data _tile_cells[MAX_TILES];
+	unsigned char _calc_tile_light_level(bn::point p_tile_pos);
+	void _recalculate_lighting(bn::point p_tile_pos);
 
 public:
 	void generate_next_chunk();
 	int generated_chunks_count();
 	bool is_generated();
+	void bake_lighting();
 
 	bn::fixed_point spawn_point();
 

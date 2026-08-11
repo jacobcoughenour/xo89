@@ -33,12 +33,14 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	_crosshair_sprite.set_visible(false);
 	_crosshair_sprite.set_bg_priority(0);
 
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	bn::string<34> text;
+	bn::ostringstream text_stream(text);
+
 	// sit in a hard loop while we generate the level
 	while (!_state.is_generated()) {
-		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 		_text_sprites.clear();
-		bn::string<34> text;
-		bn::ostringstream text_stream(text);
+		text.clear();
 		text_stream.append("Generating...");
 		_small_text.generate(0, -6, text, _text_sprites);
 		text.clear();
@@ -53,6 +55,13 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 			_state.generate_next_chunk();
 		}
 	}
+
+	_text_sprites.clear();
+	text.clear();
+	text_stream.append("Baking Lighting...");
+	_small_text.generate(0, -6, text, _text_sprites);
+	bn::core::update();
+	_state.bake_lighting();
 
 	_text_sprites.clear();
 
@@ -324,66 +333,6 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 	bottom_right = bottom_right_info.cell();
 }
 
-// 3 3 3 2 3 3 3
-// 3 3 2 1 2 3 3
-// 3 2 1 0 1 2 3
-// 2 1 0 x 0 1 2
-// 3 2 1 0 1 2 3
-// 3 3 2 1 2 3 3
-// 3 3 3 2 3 3 3
-
-static const bn::point _light_circles[]{
-	// 0
-	{ 0, -1 },
-	{ 1, 0 },
-	{ 0, 1 },
-	{ -1, 0 },
-	// 1
-	{ 0, -2 },
-	{ 1, -1 },
-	{ 2, 0 },
-	{ 1, 1 },
-	{ 0, 2 },
-	{ -1, 1 },
-	{ -2, 0 },
-	{ -1, -1 },
-	// 2
-	{ 0, -3 },
-	{ 1, -2 },
-	{ 2, -1 },
-	{ 3, 0 },
-	{ 2, 1 },
-	{ 1, 2 },
-	{ 0, 3 },
-	{ -1, 2 },
-	{ -2, 1 },
-	{ -3, 0 },
-	{ -2, -1 },
-	{ -1, -2 },
-};
-
-static const int _light_circle_lengths[]{
-	4,
-	8,
-	12
-};
-
-unsigned char mining_scene::_calc_tile_light_level(bn::point p_tile_pos) {
-	unsigned char light_level = 0;
-	int i = 0;
-	for (; light_level < 3; light_level++) {
-		auto end = i + _light_circle_lengths[light_level];
-
-		for (; i < end; i++) {
-			auto p = _light_circles[i];
-			if (!_state.is_solid_tile(p_tile_pos + p)) {
-				return light_level;
-			}
-		}
-	}
-	return 3;
-}
-
 void mining_scene::_update_tilemap() {
 	_tilemap_bg->set_position(
 			_tilemap_loaded_point * mining_state::TILEMAP_LOAD_STRIDE_PX);
@@ -446,12 +395,7 @@ void mining_scene::_update_tilemap() {
 				flag |= tile_flags::BOTTOM_RIGHT;
 			}
 
-			unsigned char light_level = 0;
-			if (flag != 0) {
-				light_level = _calc_tile_light_level(bn::point(px, py));
-			}
-
-			_set_tilemap_tile(seed, x, y, flag, tile.material, light_level);
+			_set_tilemap_tile(seed, x, y, flag, tile.material, tile.light_level);
 		}
 	}
 
