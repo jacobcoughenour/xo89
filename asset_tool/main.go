@@ -27,6 +27,24 @@ func main() {
 	if err != nil {
 		fmt.Println("error creating ship sprites:", err)
 	}
+
+	fmt.Println("converting interior image to bmp")
+	img, _, _, err := loadImage("ship_interior", 1024, 160, 0)
+	if err != nil {
+		panic(err)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/ship_interior.bmp"))
+	if err != nil {
+		panic(err)
+	}
+	err = bmp.Encode(f, img)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func createShipSprites() error {

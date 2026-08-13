@@ -52,9 +52,14 @@ private:
 		}
 	}
 
-	enum class pause_menu_option {
-
+	enum class menu_item_options {
+		// CONTROLS,
+		// MUSIC,
+		ABANDON_DRONE,
 	};
+
+	menu_item_options _cur_menu_option;
+	bool _abandon_selected;
 
 	mining_state &_state;
 

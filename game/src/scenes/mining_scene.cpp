@@ -90,6 +90,11 @@ bn::optional<scene_type> mining_scene::update() {
 		if (bn::keypad::start_released() || bn::keypad::b_released() || bn::keypad::select_released()) {
 			_unpause();
 		}
+
+		if (_abandon_selected) {
+			result = scene_type::SHIP;
+			return result;
+		}
 	}
 
 	_frame++;
@@ -111,6 +116,7 @@ void mining_scene::_pause(bool p_show_radar) {
 	}
 
 	_pause_tab = p_show_radar ? pause_menu_tab::SCANNER : pause_menu_tab::INVENTORY;
+	_cur_menu_option = menu_item_options::ABANDON_DRONE;
 }
 
 void mining_scene::_unpause() {
@@ -722,17 +728,23 @@ void mining_scene::_update_pause_menu() {
 	if (_pause_tab == pause_menu_tab::SYSTEM) {
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
-		text.clear();
-		text.append("> CONTROLS");
-		_small_text.generate(-64, -40, text, _text_sprites);
+		// text.clear();
+		// text.append("> CONTROLS");
+		// _small_text.generate(-64, -40, text, _text_sprites);
 
-		text.clear();
-		text.append("> MUSIC [OFF]");
-		_small_text.generate(-64, -30, text, _text_sprites);
+		// text.clear();
+		// text.append("> MUSIC [OFF]");
+		// _small_text.generate(-64, -30, text, _text_sprites);
 
 		text.clear();
 		text.append("> ABANDON DRONE");
 		_small_text.generate(-64, -10, text, _text_sprites);
+
+		if (bn::keypad::a_released()) {
+			// todo confirmation
+
+			_abandon_selected = true;
+		}
 	}
 }
 
