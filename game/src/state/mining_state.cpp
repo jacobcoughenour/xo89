@@ -166,11 +166,14 @@ void mining_state::bake_lighting() {
 void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
 	for (auto p : _light_circles) {
 		auto relative = p_tile_pos + p;
-		auto light = _calc_tile_light_level(relative);
 		int index = helpers::tile_pos_to_index(
 				relative.x(),
 				relative.y(),
 				SPACE_TILE_WIDTH);
+		if (index < 0 || index >= MAX_TILES) {
+			continue;
+		}
+		auto light = _calc_tile_light_level(relative);
 		auto data = _unpack_tile_data(_tile_cells[index]);
 		data.light_level = light;
 		_tile_cells[index] = _pack_tile_data(data);
