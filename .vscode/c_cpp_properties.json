@@ -8,7 +8,7 @@
 				"${workspaceFolder}/game",
 				"${workspaceFolder}/game/build",
 				"${workspaceFolder}/game/include",
-				"${workspaceFolder}/../butano/butano/include",
+				"${workspaceFolder}/butano/butano/include",
 				"/opt/devkitPro/devkitARM/arm-none-eabi/include",
 				"/opt/devkitPro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/include"
 			],

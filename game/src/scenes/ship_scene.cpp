@@ -27,6 +27,11 @@ ship_scene::~ship_scene() {
 bn::optional<scene_type> ship_scene::update() {
 	bn::optional<scene_type> result;
 
+	if (bn::keypad::start_released()) {
+		result = scene_type::MINING;
+		return result;
+	}
+
 	if (bn::keypad::right_held()) {
 		_rotation += 8;
 	}
