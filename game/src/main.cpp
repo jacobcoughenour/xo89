@@ -9,6 +9,7 @@
 #include "scenes/scene.h"
 #include "scenes/scene_type.h"
 
+#include "bn_log.h"
 #include "scenes/mining_scene.h"
 #include "scenes/ship_scene.h"
 #include "scenes/splash_scene.h"
@@ -22,10 +23,11 @@ int main() {
 	game::tests::run_tests();
 
 	bn::unique_ptr<game::scene> current_scene;
-	bn::optional<game::scene_type> next_scene_type = game::scene_type::MINING;
+	bn::optional<game::scene_type> next_scene_type = game::scene_type::SHIP;
 
 	bn::unique_ptr<game::shared_state> shared_state(new game::shared_state());
-	bn::unique_ptr<game::mining_state> mining_state(new game::mining_state(*shared_state));
+
+	bn::unique_ptr<game::mining_state> _mining_state(nullptr);
 
 	// main loop
 	while (true) {
@@ -34,6 +36,14 @@ int main() {
 			next_scene_type = current_scene->update();
 		}
 		if (next_scene_type) {
+			BN_LOG("next scene: ", static_cast<int>(next_scene_type.value()));
+
+			if (next_scene_type == game::scene_type::MINING) {
+				_mining_state.reset(new game::mining_state(*shared_state));
+			} else {
+				_mining_state.reset(nullptr);
+			}
+
 			// change scenes
 			if (current_scene) {
 				current_scene.reset();
@@ -49,7 +59,7 @@ int main() {
 						current_scene.reset(new game::ship_scene(*shared_state));
 						break;
 					case game::scene_type::MINING:
-						current_scene.reset(new game::mining_scene(*shared_state, *mining_state));
+						current_scene.reset(new game::mining_scene(*shared_state, *_mining_state));
 						break;
 					default:
 						break;

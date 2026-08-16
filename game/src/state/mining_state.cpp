@@ -1,5 +1,6 @@
 #include "state/mining_state.h"
 
+#include "bn_log.h"
 #include "stb_perlin.h"
 
 namespace game {
@@ -18,7 +19,11 @@ mining_state::mining_state(shared_state &p_shared) :
 
 	BN_ASSERT(space_point_to_tile_point(bn::fixed_point(-0.4, -2)) == bn::point(-1, -1), space_point_to_tile_point(bn::fixed_point(-0.4, -2)).x());
 
+	_seed = p_shared.get_frame_count();
 	clear_inventory();
+	_chunks_generated = 0;
+
+	BN_LOG("seed ", _rng.seed());
 
 	ship_hitbox.set_width(8);
 	ship_hitbox.set_height(8);
@@ -54,14 +59,20 @@ void mining_state::generate_next_chunk() {
 					&& y < spawn_point.y() + spawn_area) {
 				data.material = tile_material::AIR;
 			} else {
-				auto sample = stb_perlin_noise3(bn::fixed(x) / bn::fixed(8), bn::fixed(y) / bn::fixed(8), 0, SPACE_TILE_WIDTH / 8, SPACE_TILE_WIDTH, 1);
+				auto sample = stb_perlin_noise3(
+						bn::fixed(x) / bn::fixed(8),
+						bn::fixed(y) / bn::fixed(8),
+						_seed,
+						SPACE_TILE_WIDTH / 8,
+						SPACE_TILE_WIDTH,
+						255);
 				if (sample > bn::fixed(-0.08)) {
 					data.material = tile_material::ROCK;
 				}
 				if (sample > bn::fixed(0.2)) {
 					// dense enough to spawn an ore
 
-					_rng.set_seed(index);
+					_rng.set_seed(_seed + index);
 					auto d = _rng.get() % 64;
 					if (d > 42) {
 						data.material = tile_material::IRON;
@@ -182,6 +193,21 @@ void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
 
 bn::fixed_point mining_state::spawn_point() {
 	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2 + 8, 0);
+}
+
+void mining_state::leave() {
+	// transfer items
+	for (size_t i = 0; i < ITEM_TYPE_COUNT; i++) {
+		_shared.add_to_inventory(static_cast<obj_type>(i), item_inventory[i]);
+	}
+	show_leave_confirmation = false;
+}
+
+void mining_state::leave_canceled() {
+	ship_hitbox.set_position(spawn_point());
+	ship_rotation = 180;
+	ship_velocity = bn::fixed_point(0, 0.2);
+	show_leave_confirmation = false;
 }
 
 bn::point mining_state::space_point_to_tile_point(bn::fixed_point p_pos) {
@@ -359,6 +385,11 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 
 void mining_state::update() {
 	// handle ship movement
+
+	if (ship_hitbox.position().y() < -80) {
+		show_leave_confirmation = true;
+		return;
+	}
 
 	if (bn::keypad::left_held()) {
 		ship_rotation -= 2.5;

@@ -22,7 +22,7 @@
 		"**/Flutter/ephemeral": true,
 		"**/.symlinks": true,
 		"**/.plugin_symlinks": true,
-		"**/butano": true,
+		// "**/butano": true,
 		"**/build": true,
 	}
 }

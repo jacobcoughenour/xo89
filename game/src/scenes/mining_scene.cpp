@@ -26,6 +26,10 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		_tilemap_item(_tilemap_cells[0], bn::size(mining_state::TILEMAP_CELLS_SIZE, mining_state::TILEMAP_CELLS_SIZE)),
 		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
 		_crosshair_sprite(bn::sprite_items::crosshair.create_sprite()) {
+	_frame = 0;
+	_abandon_selected = false;
+	_pause_tab = pause_menu_tab::NONE;
+
 	_breaking_sprite.set_camera(_camera);
 	_breaking_sprite.set_visible(false);
 	_breaking_sprite.set_bg_priority(0);
@@ -74,6 +78,24 @@ mining_scene::~mining_scene() {
 bn::optional<scene_type> mining_scene::update() {
 	bn::optional<scene_type> result;
 
+	if (_state.show_leave_confirmation) {
+		_text_sprites.clear();
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.set_bg_priority(0);
+		_small_text.generate(0, -8, "Return to ship?", _text_sprites);
+		_small_text.generate(0, 8, "[B] NO  [A] YES", _text_sprites);
+
+		if (bn::keypad::a_pressed()) {
+			_state.leave();
+			result = scene_type::SHIP;
+			return result;
+		} else if (bn::keypad::b_pressed()) {
+			_state.leave_canceled();
+		}
+
+		return result;
+	}
+
 	if (_pause_tab == pause_menu_tab::NONE) {
 		_update_space();
 		_update_overlay_text();
@@ -92,7 +114,10 @@ bn::optional<scene_type> mining_scene::update() {
 		}
 
 		if (_abandon_selected) {
+			// todo state should handle this
+			_state.clear_inventory();
 			result = scene_type::SHIP;
+			_abandon_selected = false;
 			return result;
 		}
 	}
@@ -217,6 +242,7 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 				} else if (top && left) {
 					corner_ids[0] = 2;
 					corner_flip_h[0] = true;
+					corner_palette[0] = 0;
 				} else if (!top && left) {
 					corner_ids[0] = 3;
 				} else {
@@ -230,6 +256,7 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 					corner_flip_h[1] = true;
 				} else if (top && right) {
 					corner_ids[1] = 2;
+					corner_palette[1] = 0;
 				} else if (!top && right) {
 					corner_ids[1] = 3;
 				} else {
@@ -242,6 +269,7 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 				} else if (bottom && left) {
 					corner_ids[2] = tileset_columns + 2;
 					corner_flip_h[2] = true;
+					corner_palette[2] = 0;
 				} else if (!bottom && left) {
 					corner_ids[2] = tileset_columns + 3;
 				} else {
@@ -255,6 +283,7 @@ void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask
 					corner_flip_h[3] = true;
 				} else if (bottom && right) {
 					corner_ids[3] = tileset_columns + 2;
+					corner_palette[3] = 0;
 				} else if (!bottom && right) {
 					corner_ids[3] = tileset_columns + 3;
 				} else {
@@ -740,9 +769,8 @@ void mining_scene::_update_pause_menu() {
 		text.append("> ABANDON DRONE");
 		_small_text.generate(-64, -10, text, _text_sprites);
 
-		if (bn::keypad::a_released()) {
+		if (bn::keypad::a_pressed()) {
 			// todo confirmation
-
 			_abandon_selected = true;
 		}
 	}

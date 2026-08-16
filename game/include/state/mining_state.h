@@ -12,6 +12,7 @@
 #include "bn_keypad.h"
 #include "bn_list.h"
 #include "bn_memory.h"
+#include "bn_random.h"
 #include "bn_regular_bg_item.h"
 #include "bn_regular_bg_map_cell_info.h"
 #include "bn_regular_bg_map_ptr.h"
@@ -90,6 +91,7 @@ public:
 	void update();
 
 private:
+	unsigned int _seed;
 	bn::seed_random _rng;
 	int _chunks_generated;
 	alignas(packed_tile_data) packed_tile_data _tile_cells[MAX_TILES];
@@ -103,6 +105,9 @@ public:
 	void bake_lighting();
 
 	bn::fixed_point spawn_point();
+
+	void leave();
+	void leave_canceled();
 
 	bn::point space_point_to_tile_point(bn::fixed_point p_pos);
 	bool is_solid_tile(bn::point p_pos);
@@ -129,6 +134,7 @@ public:
 	tile_data get_tile_at(int p_tile_x, int p_tile_y);
 
 	bool is_tileset_dirty;
+	bool show_leave_confirmation;
 
 private:
 	packed_tile_data _pack_tile_data(tile_data p_data);

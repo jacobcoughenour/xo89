@@ -13,42 +13,197 @@ ship_scene::ship_scene(shared_state &p_shared) :
 		scene(p_shared),
 		_camera(bn::camera_ptr::create(0, 0)),
 		_small_text(common::fixed_8x8_sprite_font),
-		_pano_bg(bn::sp_direct_bitmap_bg_ptr::create()),
-		_test_sprite(bn::sprite_items::dev16.create_sprite()) {
-	bn::bg_palettes::set_transparent_color(bn::color(16, 16, 16));
-
-	_test_sprite.set_camera(_camera);
-	_test_sprite.set_position(1024 / 2, 4);
+		_pano_bg(bn::sp_direct_bitmap_bg_ptr::create()) {
+	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 0));
 }
 
 ship_scene::~ship_scene() {
+	_text_sprites.clear();
+	_pano_bg.set_visible(false);
+}
+
+inline int _get_menu_rotation(ship_menu p_menu) {
+	switch (p_menu) {
+		case ship_menu::ORDERS:
+			return 200;
+		case ship_menu::INVENTORY:
+			return 400;
+		case ship_menu::UPGRADE:
+			return 600;
+		case ship_menu::DEPLOY:
+			return 800;
+		default:
+			return 0;
+	}
+}
+
+inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) {
+	switch (p_menu) {
+		case ship_menu::ORDERS:
+			stream.append("ORDERS");
+			break;
+		case ship_menu::INVENTORY:
+			stream.append("INVENTORY");
+			break;
+		case ship_menu::UPGRADE:
+			stream.append("UPGRADE");
+			break;
+		case ship_menu::DEPLOY:
+			stream.append("DEPLOY");
+			break;
+		default:
+			break;
+	}
 }
 
 bn::optional<scene_type> ship_scene::update() {
 	bn::optional<scene_type> result;
 
-	if (bn::keypad::start_released()) {
-		result = scene_type::MINING;
+	_pano_bg.set_visible(!_viewing_menu.has_value());
+
+	if (_viewing_menu.has_value()) {
+		if (_viewing_menu == ship_menu::ORDERS) {
+			_update_orders_screen();
+		} else if (_viewing_menu == ship_menu::INVENTORY) {
+			_update_inventory_screen();
+		} else if (_viewing_menu == ship_menu::UPGRADE) {
+			_update_upgrades_screen();
+		} else {
+			result = scene_type::MINING;
+		}
 		return result;
+	} else {
+		if (bn::keypad::a_pressed()) {
+			_viewing_menu = _selected_ship_menu;
+			return result;
+		}
+
+		int menu_index = static_cast<int>(_selected_ship_menu);
+		if (bn::keypad::right_released()) {
+			menu_index++;
+		}
+		if (bn::keypad::left_released()) {
+			menu_index--;
+		}
+		menu_index = helpers::posmod(menu_index, 4);
+		_selected_ship_menu = static_cast<ship_menu>(menu_index);
+
+		int target_rotation = _get_menu_rotation(_selected_ship_menu);
+		_rotation = helpers::lerp_fixed(_rotation, target_rotation, 0.5);
+		_rotation = helpers::fposmod(_rotation, 1024);
+
+		_camera.set_position(_rotation, 0);
+
+		bn::sp_direct_bitmap_bg_painter painter(_pano_bg);
+		painter.blit(-_rotation.integer(), 0, bn::direct_bitmap_items::ship_interior);
+
+		_text_sprites.clear();
+
+		bn::string<40> text;
+		bn::ostringstream text_stream(text);
+
+		text.clear();
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_append_ship_menu_name(text_stream, _selected_ship_menu);
+		_small_text.generate(0, 64, text, _text_sprites);
 	}
-
-	if (bn::keypad::right_held()) {
-		_rotation += 8;
-	}
-	if (bn::keypad::left_held()) {
-		_rotation -= 8;
-	}
-
-	_rotation += 2;
-
-	_rotation = helpers::posmod(_rotation, 1024);
-
-	_camera.set_position(_rotation, 0);
-
-	bn::sp_direct_bitmap_bg_painter painter(_pano_bg);
-	painter.blit(-_rotation, 0, bn::direct_bitmap_items::ship_interior);
 
 	return result;
+}
+
+void ship_scene::_update_orders_screen() {
+	if (bn::keypad::b_released()) {
+		_viewing_menu.reset();
+		_selected_bounty_index = 0;
+		return;
+	}
+
+	auto bounties = _shared.get_bounties();
+
+	if (bn::keypad::up_released()) {
+		_selected_bounty_index = bn::max(0, _selected_bounty_index - 1);
+	} else if (bn::keypad::down_released()) {
+		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size());
+	}
+
+	_text_sprites.clear();
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_small_text.generate(0, -72, "SHIP INVENTORY", _text_sprites);
+
+	bn::string<40> text;
+	bn::ostringstream text_stream(text);
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	for (int i = 0; i < bounties.size(); i++) {
+		auto b = bounties[i];
+		text.clear();
+
+		if (_selected_bounty_index == i) {
+			text_stream.append("> ");
+		} else {
+			text_stream.append("  ");
+		}
+
+		helpers::append_with_padding(text_stream, b.amount, 3, ' ');
+		text_stream.append(" ");
+		append_item_name(text_stream, b.resource);
+		text_stream.append("  $");
+		helpers::append_with_padding(text_stream, b.price, 3, ' ');
+		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+	}
+}
+
+void ship_scene::_update_inventory_screen() {
+	if (bn::keypad::b_released()) {
+		_viewing_menu.reset();
+		return;
+	}
+
+	// SHIP INVENTORY
+	// 240 / 20000 CAPACITY
+
+	// >   20 ROCK
+	// >  840 IRON
+
+	// [A] DUMP [B] EXIT
+
+	_text_sprites.clear();
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_small_text.generate(0, -72, "SHIP INVENTORY", _text_sprites);
+
+	bn::string<40> text;
+	bn::ostringstream text_stream(text);
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
+		auto typ = static_cast<obj_type>(i);
+
+		text.clear();
+		helpers::append_with_padding(text_stream, _shared.get_inventory_count(typ), 3, ' ');
+		text_stream.append(" ");
+		append_item_name(text_stream, typ);
+
+		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+	}
+}
+
+void ship_scene::_update_upgrades_screen() {
+	if (bn::keypad::b_released()) {
+		_viewing_menu.reset();
+		return;
+	}
+
+	_text_sprites.clear();
+
+	bn::string<40> text;
+	bn::ostringstream text_stream(text);
+
+	text.clear();
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	text_stream.append("DRONE UPGRADES");
+	_small_text.generate(0, 64, text, _text_sprites);
 }
 
 } // namespace game
