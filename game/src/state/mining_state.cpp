@@ -198,7 +198,7 @@ bn::fixed_point mining_state::spawn_point() {
 void mining_state::leave() {
 	// transfer items
 	for (size_t i = 0; i < ITEM_TYPE_COUNT; i++) {
-		_shared.add_to_inventory(static_cast<obj_type>(i), item_inventory[i]);
+		_shared.deposit_to_inventory(static_cast<obj_type>(i), item_inventory[i]);
 	}
 	show_leave_confirmation = false;
 }

@@ -24,7 +24,7 @@ ship_scene::~ship_scene() {
 
 inline int _get_menu_rotation(ship_menu p_menu) {
 	switch (p_menu) {
-		case ship_menu::ORDERS:
+		case ship_menu::BOUNTIES:
 			return 200;
 		case ship_menu::INVENTORY:
 			return 400;
@@ -39,8 +39,8 @@ inline int _get_menu_rotation(ship_menu p_menu) {
 
 inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) {
 	switch (p_menu) {
-		case ship_menu::ORDERS:
-			stream.append("ORDERS");
+		case ship_menu::BOUNTIES:
+			stream.append("BOUNTIES");
 			break;
 		case ship_menu::INVENTORY:
 			stream.append("INVENTORY");
@@ -62,8 +62,8 @@ bn::optional<scene_type> ship_scene::update() {
 	_pano_bg.set_visible(!_viewing_menu.has_value());
 
 	if (_viewing_menu.has_value()) {
-		if (_viewing_menu == ship_menu::ORDERS) {
-			_update_orders_screen();
+		if (_viewing_menu == ship_menu::BOUNTIES) {
+			_update_bounties_screen();
 		} else if (_viewing_menu == ship_menu::INVENTORY) {
 			_update_inventory_screen();
 		} else if (_viewing_menu == ship_menu::UPGRADE) {
@@ -111,7 +111,7 @@ bn::optional<scene_type> ship_scene::update() {
 	return result;
 }
 
-void ship_scene::_update_orders_screen() {
+void ship_scene::_update_bounties_screen() {
 	if (bn::keypad::b_released()) {
 		_viewing_menu.reset();
 		_selected_bounty_index = 0;
@@ -126,12 +126,21 @@ void ship_scene::_update_orders_screen() {
 		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size());
 	}
 
-	_text_sprites.clear();
-	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	_small_text.generate(0, -72, "SHIP INVENTORY", _text_sprites);
+	if (bn::keypad::a_released()) {
+		_shared.collect_bounty(_selected_bounty_index);
+	}
 
+	_text_sprites.clear();
 	bn::string<40> text;
 	bn::ostringstream text_stream(text);
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+	text_stream.append("$");
+	helpers::append_with_padding(text_stream, _shared.get_balance(), 1, '0');
+	_small_text.generate(120, -64, text, _text_sprites);
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_small_text.generate(0, -72, "BOUNTIES", _text_sprites);
 
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
@@ -145,11 +154,16 @@ void ship_scene::_update_orders_screen() {
 			text_stream.append("  ");
 		}
 
-		helpers::append_with_padding(text_stream, b.amount, 3, ' ');
-		text_stream.append(" ");
-		append_item_name(text_stream, b.resource);
-		text_stream.append("  $");
-		helpers::append_with_padding(text_stream, b.price, 3, ' ');
+		if (b.collected) {
+			text_stream.append("[COLLECTED]");
+		} else {
+			helpers::append_with_padding(text_stream, b.amount, 3, ' ');
+			text_stream.append(" ");
+			append_item_name(text_stream, b.resource);
+			text_stream.append("  $");
+			helpers::append_with_padding(text_stream, b.price, 3, ' ');
+		}
+
 		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
 	}
 }
@@ -159,14 +173,6 @@ void ship_scene::_update_inventory_screen() {
 		_viewing_menu.reset();
 		return;
 	}
-
-	// SHIP INVENTORY
-	// 240 / 20000 CAPACITY
-
-	// >   20 ROCK
-	// >  840 IRON
-
-	// [A] DUMP [B] EXIT
 
 	_text_sprites.clear();
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
