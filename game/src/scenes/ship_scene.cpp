@@ -6,6 +6,7 @@
 #include "bn_sprite_items_dev16.h"
 
 #include "helpers.h"
+#include "upgrades.h"
 
 namespace game {
 
@@ -159,7 +160,7 @@ void ship_scene::_update_bounties_screen() {
 		} else {
 			helpers::append_with_padding(text_stream, b.amount, 3, ' ');
 			text_stream.append(" ");
-			append_item_name(text_stream, b.resource);
+			text_stream.append(get_item_info(b.resource).display_name);
 			text_stream.append("  $");
 			helpers::append_with_padding(text_stream, b.price, 3, ' ');
 		}
@@ -184,12 +185,12 @@ void ship_scene::_update_inventory_screen() {
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 	for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
-		auto typ = static_cast<obj_type>(i);
+		auto typ = static_cast<item_type>(i);
 
 		text.clear();
 		helpers::append_with_padding(text_stream, _shared.get_inventory_count(typ), 3, ' ');
 		text_stream.append(" ");
-		append_item_name(text_stream, typ);
+		text_stream.append(get_item_info(typ).display_name);
 
 		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
 	}
@@ -200,16 +201,22 @@ void ship_scene::_update_upgrades_screen() {
 		_viewing_menu.reset();
 		return;
 	}
-
 	_text_sprites.clear();
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	_small_text.generate(0, -72, "DRONE MODULES", _text_sprites);
 
 	bn::string<40> text;
 	bn::ostringstream text_stream(text);
 
-	text.clear();
-	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	text_stream.append("DRONE UPGRADES");
-	_small_text.generate(0, 64, text, _text_sprites);
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	for (int i = 0; i < UPGRADE_COUNT; i++) {
+		auto info = upgrades[i];
+
+		text.clear();
+		text_stream.append(info.display_name);
+		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+	}
 }
 
 } // namespace game

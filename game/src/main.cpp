@@ -36,7 +36,7 @@ int main() {
 			next_scene_type = current_scene->update();
 		}
 		if (next_scene_type) {
-			BN_LOG("next scene: ", static_cast<int>(next_scene_type.value()));
+			BN_LOG("changing to scene ", static_cast<int>(next_scene_type.value()));
 
 			if (next_scene_type == game::scene_type::MINING) {
 				_mining_state.reset(new game::mining_state(*shared_state));
@@ -44,27 +44,31 @@ int main() {
 				_mining_state.reset(nullptr);
 			}
 
-			// change scenes
 			if (current_scene) {
+				// cleanup current scene
 				current_scene.reset();
-			} else {
-				switch (*next_scene_type) {
-					// case game::scene_type::SPLASH:
-					// 	current_scene.reset(new game::nostabyte_splash_scene());
-					// 	break;
-					// case game::scene_type::MAIN_MENU:
-					// 	current_scene.reset(new game::main_menu_scene(*shared));
-					// 	break;
-					case game::scene_type::SHIP:
-						current_scene.reset(new game::ship_scene(*shared_state));
-						break;
-					case game::scene_type::MINING:
-						current_scene.reset(new game::mining_scene(*shared_state, *_mining_state));
-						break;
-					default:
-						break;
-				}
+				bn::core::update();
 			}
+
+			// change scenes
+			switch (*next_scene_type) {
+				// case game::scene_type::SPLASH:
+				// 	current_scene.reset(new game::nostabyte_splash_scene());
+				// 	break;
+				// case game::scene_type::MAIN_MENU:
+				// 	current_scene.reset(new game::main_menu_scene(*shared));
+				// 	break;
+				case game::scene_type::SHIP:
+					current_scene.reset(new game::ship_scene(*shared_state));
+					break;
+				case game::scene_type::MINING:
+					current_scene.reset(new game::mining_scene(*shared_state, *_mining_state));
+					break;
+				default:
+					break;
+			}
+
+			next_scene_type.reset();
 		}
 
 		shared_state->update();

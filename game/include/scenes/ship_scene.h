@@ -11,7 +11,7 @@
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
 #include "bn_vector.h"
-#include "obj_type.h"
+#include "items.h"
 
 namespace game {
 

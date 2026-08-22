@@ -5,7 +5,7 @@ namespace game {
 shared_state::shared_state() {
 	generate_bounties();
 
-	_ship_inventory[static_cast<int>(obj_type::GOLD)] = 1000;
+	_ship_inventory[static_cast<int>(item_type::GOLD)] = 1000;
 }
 
 void shared_state::update() {
@@ -19,32 +19,33 @@ void shared_state::generate_bounties() {
 
 	auto count = 3 + _rng.get_int(2);
 	for (int i = 0; i < count; i++) {
-		int type = _rng.get_int(static_cast<int>(obj_type::OBJ_TYPE_MAX));
+		int type = _rng.get_int(static_cast<int>(item_type::ITEM_TYPE_MAX));
 
 		unsigned int per_price = 2 + _rng.get_int(8);
 		unsigned int amount = 30 + _rng.get_int(50);
 
 		bounty b{
-			static_cast<obj_type>(type),
+			.resource = static_cast<item_type>(type),
 			// todo weights
-			amount,
-			amount * per_price,
+			.amount = amount,
+			.price = amount * per_price,
+			.collected = false
 		};
 		_bounties.push_back(b);
 	}
 }
 
-int shared_state::get_inventory_count(obj_type p_obj_type) {
-	return _ship_inventory[static_cast<int>(p_obj_type)];
+unsigned int shared_state::get_inventory_count(item_type p_item_type) {
+	return _ship_inventory[static_cast<int>(p_item_type)];
 }
 
-void shared_state::deposit_to_inventory(obj_type p_obj_type, unsigned int p_amount) {
-	_ship_inventory[static_cast<int>(p_obj_type)] += p_amount;
+void shared_state::deposit_to_inventory(item_type p_item_type, unsigned int p_amount) {
+	_ship_inventory[static_cast<int>(p_item_type)] += p_amount;
 }
 
-void shared_state::_withdraw_from_inventory(obj_type p_obj_type, unsigned int p_amount) {
-	BN_ASSERT(_ship_inventory[static_cast<int>(p_obj_type)] >= p_amount);
-	_ship_inventory[static_cast<int>(p_obj_type)] -= p_amount;
+void shared_state::_withdraw_from_inventory(item_type p_item_type, unsigned int p_amount) {
+	BN_ASSERT(_ship_inventory[static_cast<int>(p_item_type)] >= p_amount);
+	_ship_inventory[static_cast<int>(p_item_type)] -= p_amount;
 }
 
 unsigned int shared_state::get_frame_count() {

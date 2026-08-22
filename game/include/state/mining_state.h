@@ -1,7 +1,7 @@
 #pragma once
 
 #include "helpers.h"
-#include "obj_type.h"
+#include "items.h"
 #include "shared_state.h"
 
 #include "bn_array.h"
@@ -123,7 +123,7 @@ public:
 	bn::fixed_point ship_velocity;
 
 	struct floating_object {
-		obj_type object_type;
+		item_type object_type;
 		unsigned char sprite_index;
 		bn::fixed_point position;
 		bn::fixed_point velocity;
@@ -141,7 +141,7 @@ private:
 	tile_data _unpack_tile_data(packed_tile_data p_data);
 
 public:
-	void spawn_floating_object(obj_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity);
+	void spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity);
 
 	struct raycast_hit {
 		bn::point tile_pos;
@@ -152,10 +152,10 @@ public:
 
 	int item_inventory[ITEM_TYPE_COUNT];
 	void clear_inventory();
-	void pickup_resource(obj_type p_type, int amount);
+	void pickup_resource(item_type p_type, int amount);
 
 	struct item_queue_entry {
-		obj_type object_type;
+		item_type object_type;
 		int amount;
 		int frame;
 	};

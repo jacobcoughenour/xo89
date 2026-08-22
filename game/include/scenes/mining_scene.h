@@ -2,7 +2,7 @@
 
 #include "fonts/common_fixed_8x8_sprite_font.h"
 #include "helpers.h"
-#include "obj_type.h"
+#include "items.h"
 #include "scene.h"
 #include "state/mining_state.h"
 #include "state/shared_state.h"

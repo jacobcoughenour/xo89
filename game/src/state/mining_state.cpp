@@ -19,11 +19,12 @@ mining_state::mining_state(shared_state &p_shared) :
 
 	BN_ASSERT(space_point_to_tile_point(bn::fixed_point(-0.4, -2)) == bn::point(-1, -1), space_point_to_tile_point(bn::fixed_point(-0.4, -2)).x());
 
-	_seed = p_shared.get_frame_count();
+	_rng.set_seed(p_shared.get_frame_count());
+	_seed = _rng.get_int();
 	clear_inventory();
 	_chunks_generated = 0;
 
-	BN_LOG("seed ", _rng.seed());
+	BN_LOG("generating with seed ", _seed);
 
 	ship_hitbox.set_width(8);
 	ship_hitbox.set_height(8);
@@ -198,7 +199,7 @@ bn::fixed_point mining_state::spawn_point() {
 void mining_state::leave() {
 	// transfer items
 	for (size_t i = 0; i < ITEM_TYPE_COUNT; i++) {
-		_shared.deposit_to_inventory(static_cast<obj_type>(i), item_inventory[i]);
+		_shared.deposit_to_inventory(static_cast<item_type>(i), item_inventory[i]);
 	}
 	show_leave_confirmation = false;
 }
@@ -231,7 +232,7 @@ bool mining_state::can_mine_tile(bn::point p_pos) {
 	return c.material != tile_material::AIR && c.material != tile_material::BEDROCK;
 }
 
-void mining_state::spawn_floating_object(obj_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
+void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
 	if (objects.full()) {
 		// make room
 		objects.pop_back();
@@ -244,10 +245,10 @@ void mining_state::spawn_floating_object(obj_type p_type, bn::fixed_point p_posi
 	}
 
 	floating_object obj{
-		p_type,
-		sprite_index,
-		p_position,
-		p_velocity,
+		.object_type = p_type,
+		.sprite_index = sprite_index,
+		.position = p_position,
+		.velocity = p_velocity,
 	};
 
 	objects.push_front(obj);
@@ -263,9 +264,9 @@ bn::optional<mining_state::raycast_hit> mining_state::raycast(bn::fixed_point p_
 		auto tile_pos = space_point_to_tile_point(p_origin);
 		if (is_solid_tile(tile_pos)) {
 			hit = raycast_hit{
-				tile_pos,
+				.tile_pos = tile_pos,
 				// todo we need to figure out the actual intersection point
-				bn::fixed_point(tile_pos * 16) + bn::point(8, 8),
+				.intersection_pos = bn::fixed_point(tile_pos * 16) + bn::point(8, 8),
 			};
 			return hit;
 		}
@@ -289,10 +290,10 @@ packed_tile_data mining_state::_pack_tile_data(tile_data p_data) {
 }
 
 tile_data mining_state::_unpack_tile_data(packed_tile_data p_data) {
-	tile_data data;
-	data.material = static_cast<tile_material>(p_data & 0b00111111);
-	data.light_level = (p_data & 0b11000000) >> 6;
-	return data;
+	return tile_data{
+		.material = static_cast<tile_material>(p_data & 0b00111111),
+		.light_level = static_cast<unsigned char>((p_data & 0b11000000) >> 6)
+	};
 }
 
 tile_data mining_state::get_tile(bn::point p_tile_point) {
@@ -334,9 +335,9 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 	set_tile_material(p_tile_point, tile_material::AIR);
 
 	int drop_amount = 0;
-	obj_type drop_type = static_cast<obj_type>(static_cast<unsigned char>(tile.material) - static_cast<unsigned char>(tile_material::ROCK));
+	item_type drop_type = static_cast<item_type>(static_cast<unsigned char>(tile.material) - static_cast<unsigned char>(tile_material::ROCK));
 
-	if (drop_type == obj_type::ROCK) {
+	if (drop_type == item_type::ROCK) {
 		drop_amount = 1;
 	} else {
 		drop_amount = _rng.get_bool() ? 1 : 2;
@@ -364,14 +365,14 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 
 		if (p_tile_y < 0 && p_tile_x > middle - 4 && p_tile_x < middle + 4) {
 			return tile_data{
-				tile_material::AIR,
-				0
+				.material = tile_material::AIR,
+				.light_level = 0,
 			};
 		}
 
 		return tile_data{
-			tile_material::BEDROCK,
-			0
+			.material = tile_material::BEDROCK,
+			.light_level = 0
 		};
 	}
 
@@ -482,12 +483,12 @@ void mining_state::update() {
 }
 
 void mining_state::clear_inventory() {
-	for (size_t i = 0; i < static_cast<unsigned long>(obj_type::OBJ_TYPE_MAX); i++) {
+	for (size_t i = 0; i < ITEM_TYPE_COUNT; i++) {
 		item_inventory[i] = 0;
 	}
 }
 
-void mining_state::pickup_resource(obj_type p_type, int p_amount) {
+void mining_state::pickup_resource(item_type p_type, int p_amount) {
 	item_inventory[static_cast<unsigned long>(p_type)] += p_amount;
 
 	int frame = _item_queue_frame + ITEM_QUEUE_FRAMES_TIME;
@@ -505,9 +506,9 @@ void mining_state::pickup_resource(obj_type p_type, int p_amount) {
 		item_pickup_queue.pop_front();
 	}
 	item_pickup_queue.push_back({
-			p_type,
-			p_amount,
-			frame,
+			.object_type = p_type,
+			.amount = p_amount,
+			.frame = frame,
 	});
 }
 

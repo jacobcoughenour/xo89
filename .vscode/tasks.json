@@ -28,6 +28,7 @@
 			}
 		},
 		{
+			"command": "",
 			"label": "make debug",
 			"dependsOn": [
 				"build assets"
@@ -57,14 +58,17 @@
 					"-j12"
 				]
 			},
-			"problemMatcher": [],
+			"problemMatcher": [
+				"$gcc"
+			],
 			"presentation": {
 				"clear": true,
 				"reveal": "always",
-				"revealProblems": "never"
+				"revealProblems": "never",
 			},
 		},
 		{
+			"command": "",
 			"label": "make example debug",
 			"type": "process",
 			"options": {

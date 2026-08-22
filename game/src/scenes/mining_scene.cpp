@@ -600,12 +600,12 @@ void mining_scene::_update_pause_menu() {
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 		for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
-			auto typ = static_cast<obj_type>(i);
+			auto typ = items[i];
 
 			text.clear();
 			helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
 			text_stream.append(" ");
-			append_item_name(text_stream, typ);
+			text_stream.append(typ.display_name);
 
 			_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
 		}
@@ -794,7 +794,7 @@ void mining_scene::_update_overlay_text() {
 		text_stream.append("+");
 		text_stream.append(obj.amount);
 		text_stream.append(" ");
-		append_item_name(text_stream, obj.object_type);
+		text_stream.append(get_item_info(obj.object_type).display_name);
 
 		auto y = bn::clamp((mining_state::ITEM_QUEUE_FRAMES_TIME - (obj.frame - item_frame)) / 4, 0, 4);
 
