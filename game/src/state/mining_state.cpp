@@ -202,6 +202,7 @@ void mining_state::leave() {
 		_shared.deposit_to_inventory(static_cast<item_type>(i), item_inventory[i]);
 	}
 	show_leave_confirmation = false;
+	_shared.save();
 }
 
 void mining_state::leave_canceled() {

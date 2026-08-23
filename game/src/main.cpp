@@ -16,6 +16,8 @@
 
 #include "tests.h"
 
+#include "bn_sram.h"
+
 int main() {
 	bn::core::init();
 
@@ -28,6 +30,8 @@ int main() {
 	bn::unique_ptr<game::shared_state> shared_state(new game::shared_state());
 
 	bn::unique_ptr<game::mining_state> _mining_state(nullptr);
+
+	BN_LOG("sram size: ", bn::sram::size());
 
 	// main loop
 	while (true) {
