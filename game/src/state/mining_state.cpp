@@ -385,6 +385,15 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 	return _unpack_tile_data(_tile_cells[index]);
 }
 
+void mining_state::take_damage(unsigned int p_damage_amount) {
+	if (p_damage_amount >= ship_health) {
+		ship_health = 0;
+	} else {
+		ship_health -= p_damage_amount;
+		ship_invincible_timer = SHIP_INVINCIBLE_FRAMES;
+	}
+}
+
 void mining_state::update() {
 	// handle ship movement
 
@@ -415,6 +424,10 @@ void mining_state::update() {
 	bn::fixed_rect final_aabb = ship_hitbox;
 	final_aabb.set_position(desired_pos);
 
+	if (ship_invincible_timer > 0) {
+		ship_invincible_timer--;
+	}
+
 	bool hit = false;
 
 	if (
@@ -424,6 +437,13 @@ void mining_state::update() {
 			|| is_solid_tile(space_point_to_tile_point(final_aabb.bottom_right()))) {
 		hit = true;
 
+		if (ship_invincible_timer == 0) {
+			auto speed = helpers::point_length(ship_velocity);
+			if (speed > 0.72) {
+				take_damage(3);
+			}
+		}
+
 		ship_velocity = ship_velocity * bn::fixed(-0.6);
 	}
 
@@ -431,9 +451,7 @@ void mining_state::update() {
 
 	bn::fixed_point ship_pos = ship_hitbox.center();
 
-	// go through all the loaded chunks and move the objects by their current
-	// velocity
-
+	// move the objects by their current velocity
 	for (auto it = objects.begin(); it != objects.end(); ++it) {
 		auto &obj = *it;
 

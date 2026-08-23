@@ -81,6 +81,8 @@ public:
 	static const int TILESET_COLUMNS_X16 = 16;
 	static const int TILESET_COLUMNS_X8 = TILESET_COLUMNS_X16 * TILESET_COLUMNS_X16;
 
+	static const int SHIP_INVINCIBLE_FRAMES = 60;
+
 private:
 	shared_state &_shared;
 
@@ -116,11 +118,15 @@ public:
 	void set_tile_material(bn::point p_tile_point, tile_material p_tile_material);
 	void mine_tile(bn::point p_tile_point);
 
+	void take_damage(unsigned int p_damage_amount);
+
 	// do we want to combine these into a "transform"?
 	bn::fixed_rect ship_hitbox;
 	// start pointing down
 	bn::fixed ship_rotation = 180;
 	bn::fixed_point ship_velocity;
+	unsigned int ship_health = 100;
+	unsigned int ship_invincible_timer = 0;
 
 	struct floating_object {
 		item_type object_type;

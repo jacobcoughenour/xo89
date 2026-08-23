@@ -78,6 +78,22 @@ mining_scene::~mining_scene() {
 bn::optional<scene_type> mining_scene::update() {
 	bn::optional<scene_type> result;
 
+	if (_state.ship_health <= 0) {
+		_text_sprites.clear();
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.set_bg_priority(0);
+		_small_text.generate(0, -8, "CONNECTION LOST", _text_sprites);
+		_small_text.generate(0, 8, "[A] OK", _text_sprites);
+
+		if (bn::keypad::a_pressed()) {
+			_state.clear_inventory();
+			result = scene_type::SHIP;
+			return result;
+		}
+
+		return result;
+	}
+
 	if (_state.show_leave_confirmation) {
 		_text_sprites.clear();
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
@@ -447,6 +463,8 @@ void mining_scene::_update_space() {
 	_ship_sprite->set_position(_state.ship_hitbox.position());
 	_ship_laser->set_position(_state.ship_hitbox.position());
 
+	_ship_sprite->set_visible((_state.ship_invincible_timer / 2) % 2 == 0);
+
 	const bn::fixed max_dist = 64;
 
 	auto targetting_hit = _state.raycast(_state.ship_hitbox.center(), -helpers::angle_to_dir(-_state.ship_rotation), max_dist);
@@ -777,15 +795,21 @@ void mining_scene::_update_pause_menu() {
 }
 
 void mining_scene::_update_overlay_text() {
-	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
 	_small_text.set_bg_priority(0);
 	_text_sprites.clear();
 
-	int index = 0;
-	int item_frame = _state.item_queue_frame();
-
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 	bn::string<15> text;
 	bn::ostringstream text_stream(text);
+	text_stream.append(_state.ship_health);
+	text_stream.append("/");
+	text_stream.append("100");
+	_small_text.generate(-118, 76, text, _text_sprites);
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+
+	int index = 0;
+	int item_frame = _state.item_queue_frame();
 
 	for (auto it = _state.item_pickup_queue.begin(); it != _state.item_pickup_queue.end(); ++it) {
 		auto &obj = *it;
