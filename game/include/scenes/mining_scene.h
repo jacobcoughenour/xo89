@@ -7,6 +7,8 @@
 #include "state/mining_state.h"
 #include "state/shared_state.h"
 
+#include "entities/floating_item.h"
+
 #include "bn_affine_bg_ptr.h"
 #include "bn_camera_ptr.h"
 #include "bn_cameras.h"
@@ -111,4 +113,5 @@ private:
 	void _update_tilemap();
 	void _set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level);
 };
+
 } //namespace game

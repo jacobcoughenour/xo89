@@ -4,6 +4,8 @@
 #include "items.h"
 #include "shared_state.h"
 
+#include "entities/floating_item.h"
+
 #include "bn_array.h"
 #include "bn_bg_palettes.h"
 #include "bn_bg_tiles.h"
@@ -128,13 +130,7 @@ public:
 	unsigned int ship_health = 100;
 	unsigned int ship_invincible_timer = 0;
 
-	struct floating_object {
-		item_type object_type;
-		unsigned char sprite_index;
-		bn::fixed_point position;
-		bn::fixed_point velocity;
-	};
-	bn::list<floating_object, MAX_OBJS> objects;
+	bn::list<floating_item, MAX_OBJS> objects;
 
 	bn::point point_to_tilemap_pos(bn::fixed_point p_pos);
 	tile_data get_tile_at(int p_tile_x, int p_tile_y);

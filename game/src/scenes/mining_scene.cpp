@@ -560,7 +560,7 @@ void mining_scene::_update_space() {
 
 		sprite_flicker_index++;
 
-		if (!helpers::is_point_in_view(_camera.position(), obj.position, 8)) {
+		if (!helpers::is_point_in_view(_camera.position(), obj.get_position(), 8)) {
 			continue;
 		}
 
@@ -576,8 +576,8 @@ void mining_scene::_update_space() {
 		}
 		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
 		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
-						.create_tiles(obj.sprite_index));
-		existing.set_position(obj.position);
+						.create_tiles(obj.get_sprite_index()));
+		existing.set_position(obj.get_position());
 		existing.set_visible(true);
 		existing.set_camera(_camera);
 		sprite_index++;

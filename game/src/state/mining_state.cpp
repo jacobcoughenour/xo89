@@ -1,5 +1,7 @@
 #include "state/mining_state.h"
 
+#include "entities/floating_item.h"
+
 #include "bn_log.h"
 #include "stb_perlin.h"
 
@@ -245,12 +247,7 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 		sprite_index = 0;
 	}
 
-	floating_object obj{
-		.object_type = p_type,
-		.sprite_index = sprite_index,
-		.position = p_position,
-		.velocity = p_velocity,
-	};
+	floating_item obj(*this, p_type, sprite_index, p_position, p_velocity);
 
 	objects.push_front(obj);
 }
@@ -449,39 +446,10 @@ void mining_state::update() {
 
 	ship_hitbox = hit ? ship_hitbox : final_aabb;
 
-	bn::fixed_point ship_pos = ship_hitbox.center();
-
-	// move the objects by their current velocity
 	for (auto it = objects.begin(); it != objects.end(); ++it) {
 		auto &obj = *it;
-
-		bn::fixed dist = helpers::max_box_dist(obj.position, ship_pos);
-
-		if (dist < 2) {
-			pickup_resource(obj.object_type, 1);
+		if (!obj.update()) {
 			objects.erase(it);
-			continue;
-		}
-
-		bn::fixed len = helpers::distance(ship_pos, obj.position);
-		bn::fixed_point dir = helpers::normalize_point(ship_pos - obj.position);
-		// attractor influence distance
-		constexpr int d = 40;
-		// push object towards ship
-		obj.velocity += dir * bn::min(bn::fixed(10), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
-
-		// move by velocity
-		auto obj_desired_pos = obj.position + obj.velocity;
-
-		if (is_solid_tile(space_point_to_tile_point(obj_desired_pos))) {
-			// bounce
-			obj.velocity *= bn::fixed(-0.9);
-		} else {
-			obj.position = obj_desired_pos;
-			// velocity damping
-			obj.velocity *= bn::fixed(0.98);
-			// gravity
-			obj.velocity += bn::fixed_point(0.0, 0.08);
 		}
 	}
 
