@@ -57,6 +57,11 @@ struct tile_data {
 	unsigned char light_level;
 };
 
+enum class drone_mode : unsigned char {
+	MINING,
+	COMBAT
+};
+
 class mining_state : public state {
 public:
 	static const int MAX_VISIBLE_OBJS = 16;
@@ -106,12 +111,17 @@ private:
 	unsigned char _calc_tile_light_level(bn::point p_tile_pos);
 	void _recalculate_lighting(bn::point p_tile_pos);
 
+	drone_mode _drone_mode = drone_mode::MINING;
+
 	int _mining_timer;
 	int _mining_duration = 30;
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
 
 public:
+	drone_mode get_drone_mode() { return _drone_mode; }
+	void set_drone_mode(drone_mode p_drone_mode);
+
 	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
 	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
 	bn::fixed_point get_aim_direction() { return _aim_direction; }

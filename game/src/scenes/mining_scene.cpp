@@ -113,6 +113,33 @@ bn::optional<scene_type> mining_scene::update() {
 	}
 
 	if (_pause_tab == pause_menu_tab::NONE) {
+		// cycle modes
+		if (bn::keypad::l_pressed()) {
+			unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
+			_state.set_drone_mode(static_cast<drone_mode>((mode + 1) % 2));
+		}
+
+		// overlay selector
+		if (bn::keypad::l_held()) {
+			unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
+			if (bn::keypad::up_released() && mode > 0) {
+				_state.set_drone_mode(static_cast<drone_mode>(mode - 1));
+			} else if (bn::keypad::down_released() && mode < 1) {
+				_state.set_drone_mode(static_cast<drone_mode>(mode + 1));
+			}
+
+			_text_sprites.clear();
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+			_small_text.set_bg_priority(0);
+			_small_text.generate(0, -16, "MODE", _text_sprites);
+			_small_text.generate(0, 8, "MINING", _text_sprites);
+			_small_text.generate(0, 8 + 12, "COMBAT", _text_sprites);
+
+			_small_text.generate(-32, mode * 12 + 8, ">", _text_sprites);
+
+			return result;
+		}
+
 		_update_space();
 		_update_overlay_text();
 

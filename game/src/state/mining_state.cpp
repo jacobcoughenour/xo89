@@ -195,6 +195,10 @@ void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
 	}
 }
 
+void mining_state::set_drone_mode(drone_mode p_drone_mode) {
+	_drone_mode = p_drone_mode;
+}
+
 bn::fixed_point mining_state::spawn_point() {
 	return bn::fixed_point(SPACE_SIZE * CHUNK_SIZE / 2 + 8, 0);
 }
@@ -464,26 +468,31 @@ void mining_state::update() {
 	auto targetting_hit = raycast(ship_hitbox.center(), -helpers::angle_to_dir(-ship_rotation), max_dist);
 	_aim_direction = -helpers::set_length(helpers::angle_to_dir(-ship_rotation), max_dist - 4.0);
 
-	if (targetting_hit.has_value()) {
-		auto dist = helpers::distance(ship_hitbox.center(), targetting_hit.value().intersection_pos);
-		_aim_direction = targetting_hit.value().intersection_pos - ship_hitbox.position();
+	if (_drone_mode == drone_mode::MINING) {
+		if (targetting_hit.has_value()) {
+			_aim_direction = targetting_hit.value().intersection_pos - ship_hitbox.position();
 
-		auto new_tile = targetting_hit.value().tile_pos;
-		if (new_tile != _laser_target_cell) {
-			_mining_timer = 0;
-			_laser_target_cell = new_tile;
-		}
+			auto new_tile = targetting_hit.value().tile_pos;
 
-		if (bn::keypad::r_held()) {
-			_mining_timer++;
-			if (_mining_timer >= 30) {
-				mine_tile(_laser_target_cell.value());
+			if (new_tile != _laser_target_cell) {
+				_mining_timer = 0;
+				_laser_target_cell = new_tile;
+			}
+
+			if (bn::keypad::r_held()) {
+				_mining_timer++;
+				if (_mining_timer >= 30) {
+					mine_tile(_laser_target_cell.value());
+					_mining_timer = 0;
+				}
+			} else {
 				_mining_timer = 0;
 			}
 		} else {
 			_mining_timer = 0;
+			_laser_target_cell.reset();
 		}
-	} else {
+	} else if (_drone_mode == drone_mode::COMBAT) {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
 	}
