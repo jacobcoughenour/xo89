@@ -118,6 +118,9 @@ private:
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
 
+	int _fire_timer;
+	int _fire_cooldown = 8;
+
 public:
 	drone_mode get_drone_mode() { return _drone_mode; }
 	void set_drone_mode(drone_mode p_drone_mode);

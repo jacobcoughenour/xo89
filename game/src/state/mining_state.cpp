@@ -495,6 +495,17 @@ void mining_state::update() {
 	} else if (_drone_mode == drone_mode::COMBAT) {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
+
+		if (bn::keypad::r_held()) {
+			if (_fire_timer == 0) {
+				spawn_projectile(ship_hitbox.center(), helpers::set_length(_aim_direction, 3.0));
+				_fire_timer = _fire_cooldown;
+			}
+		}
+	}
+
+	if (_fire_timer > 0) {
+		_fire_timer--;
 	}
 
 	// process entities

@@ -616,7 +616,7 @@ void mining_scene::_update_space() {
 			// add sprite
 			_proj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
 		}
-		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
+		bn::sprite_ptr &existing = _proj_sprites.at(sprite_index);
 		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
 						.create_tiles(0));
 		existing.set_position(proj.get_position());
