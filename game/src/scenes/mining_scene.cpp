@@ -461,79 +461,59 @@ void mining_scene::_update_space() {
 					.create_tiles((((_state.ship_rotation / bn::fixed(360.0)) * 32 - 0.5).integer() + 32) % 32));
 
 	_ship_sprite->set_position(_state.ship_hitbox.position());
-	_ship_laser->set_position(_state.ship_hitbox.position());
 
 	_ship_sprite->set_visible((_state.ship_invincible_timer / 2) % 2 == 0);
 
-	const bn::fixed max_dist = 64;
-
-	auto targetting_hit = _state.raycast(_state.ship_hitbox.center(), -helpers::angle_to_dir(-_state.ship_rotation), max_dist);
-	auto target_dir = -helpers::set_length(helpers::angle_to_dir(-_state.ship_rotation), max_dist - 4.0);
-
-	if (targetting_hit.has_value()) {
-		auto dist = helpers::distance(_state.ship_hitbox.center(), targetting_hit.value().intersection_pos);
-		target_dir = targetting_hit.value().intersection_pos - _state.ship_hitbox.position();
-
-		auto new_tile = targetting_hit.value().tile_pos;
-		if (new_tile != _laser_target_cell) {
-			_mining_timer = 0;
-			_breaking_sprite.set_position(targetting_hit.value().intersection_pos);
-		}
-		_laser_target_cell = new_tile;
-
-		if (bn::keypad::r_held()) {
-			_ship_laser->set_visible(true);
-			_ship_laser->set_rotation_angle(bn::degrees_atan2(target_dir.x().integer(), target_dir.y().integer()) + 180);
-
-			// flicker
-			_ship_laser->set_horizontal_scale(_frame % 4 < 2 ? 0.05 : 0.06);
-
-			if (dist > 1.0) {
-				_ship_laser->set_vertical_scale(dist / 128.0);
-			} else {
-				_ship_laser->set_visible(false);
-			}
-
-			_mining_timer++;
-
-			if (_mining_timer >= 30) {
-				// todo move to state
-
-				// mine the cell
-				_state.mine_tile(_laser_target_cell);
-				_mining_timer = 0;
-			} else {
-				_breaking_sprite.set_tiles(bn::sprite_items::breaking.tiles_item()
-								.create_tiles(_mining_timer / (30 / 4) % 4));
-			}
-		} else {
-			_ship_laser->set_visible(false);
-			_ship_laser->set_vertical_scale(1.4);
-			_mining_timer = 0;
-		}
-	} else {
-		_ship_laser->set_visible(false);
-		_mining_timer = 0;
-	}
 	_bg_bg->set_position(-_camera.position() / 2);
 
-	auto crosshair_target_pos = _state.ship_hitbox.center() + target_dir;
+	auto aim_dir = _state.get_aim_direction();
+	auto crosshair_target_pos = _state.ship_hitbox.center() + aim_dir;
 	if (helpers::distance(crosshair_target_pos, _crosshair_sprite.position()) > 1.0) {
 		_crosshair_sprite.set_position(helpers::lerp_fixed_point(_crosshair_sprite.position(), crosshair_target_pos, 0.55));
 	} else {
 		_crosshair_sprite.set_position(crosshair_target_pos);
 	}
 
-	if (targetting_hit.has_value()) {
+	auto target_cell = _state.get_targeting_cell();
+	auto mining_progress = _state.get_mining_progress();
+	auto is_mining = mining_progress > 0;
+
+	_breaking_sprite.set_visible(is_mining);
+	if (!is_mining) {
+		_ship_laser->set_visible(false);
+	}
+
+	if (target_cell.has_value()) {
 		if (_crosshair_frame < 4) {
 			_crosshair_frame++;
 		}
+
+		if (is_mining) {
+			auto hit_point = target_cell.value() * 16 + bn::point(8, 8);
+			auto dist = helpers::distance(_state.ship_hitbox.center(), hit_point);
+
+			_breaking_sprite.set_position(hit_point);
+			_breaking_sprite.set_tiles(bn::sprite_items::breaking.tiles_item()
+							.create_tiles(helpers::remap_fixed(mining_progress, 0, 1, 0, 4).integer()));
+
+			_ship_laser->set_position(_state.ship_hitbox.position());
+			_ship_laser->set_rotation_angle(bn::degrees_atan2(aim_dir.x().integer(), aim_dir.y().integer()) + 180);
+
+			// flicker
+			_ship_laser->set_horizontal_scale(_frame % 4 < 2 ? 0.05 : 0.06);
+
+			if (dist > 1.0) {
+				_ship_laser->set_visible(is_mining);
+				_ship_laser->set_vertical_scale(dist / 128.0);
+			} else {
+				_ship_laser->set_visible(false);
+			}
+		}
+
 	} else if (_crosshair_frame > 0) {
 		_crosshair_frame--;
 	}
 	_crosshair_sprite.set_tiles(bn::sprite_items::crosshair.tiles_item().create_tiles(_crosshair_frame / 2));
-
-	_breaking_sprite.set_visible(_mining_timer > 0);
 
 	// keep camera on the ship
 	_camera.set_position(_state.ship_hitbox.position());
@@ -588,6 +568,39 @@ void mining_scene::_update_space() {
 	// hide unused
 	for (; sprite_index < _obj_sprites.size(); sprite_index++) {
 		_obj_sprites.at(sprite_index).set_visible(false);
+	}
+
+	sprite_index = 0;
+
+	for (auto proj : _state.projectiles) {
+		if (sprite_index >= mining_state::MAX_VISIBLE_PROJECTILES) {
+			break;
+		}
+
+		sprite_flicker_index++;
+
+		if (!helpers::is_point_in_view(_camera.position(), proj.get_position(), 8)) {
+			continue;
+		}
+
+		BN_ASSERT(sprite_index <= _proj_sprites.size());
+
+		if (sprite_index == _proj_sprites.size()) {
+			// add sprite
+			_proj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
+		}
+		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
+		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
+						.create_tiles(0));
+		existing.set_position(proj.get_position());
+		existing.set_visible(true);
+		existing.set_camera(_camera);
+		sprite_index++;
+	}
+
+	// hide unused
+	for (; sprite_index < _proj_sprites.size(); sprite_index++) {
+		_proj_sprites.at(sprite_index).set_visible(false);
 	}
 }
 

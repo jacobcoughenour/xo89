@@ -5,6 +5,7 @@
 #include "shared_state.h"
 
 #include "entities/floating_item.h"
+#include "entities/projectile.h"
 
 #include "bn_array.h"
 #include "bn_bg_palettes.h"
@@ -61,6 +62,9 @@ public:
 	static const int MAX_VISIBLE_OBJS = 16;
 	static const int MAX_OBJS = MAX_VISIBLE_OBJS * 2;
 
+	static const int MAX_VISIBLE_PROJECTILES = 16;
+	static const int MAX_PROJECTILES = MAX_VISIBLE_PROJECTILES * 2;
+
 	static const int CHUNK_SIZE = 128;
 	static const int SPACE_SIZE = 16;
 	static const int MAX_CHUNKS = SPACE_SIZE * SPACE_SIZE;
@@ -102,7 +106,16 @@ private:
 	unsigned char _calc_tile_light_level(bn::point p_tile_pos);
 	void _recalculate_lighting(bn::point p_tile_pos);
 
+	int _mining_timer;
+	int _mining_duration = 30;
+	bn::optional<bn::point> _laser_target_cell;
+	bn::fixed_point _aim_direction;
+
 public:
+	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
+	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
+	bn::fixed_point get_aim_direction() { return _aim_direction; }
+
 	void generate_next_chunk();
 	int generated_chunks_count();
 	bool is_generated();
@@ -131,6 +144,7 @@ public:
 	unsigned int ship_invincible_timer = 0;
 
 	bn::list<floating_item, MAX_OBJS> objects;
+	bn::list<projectile, MAX_PROJECTILES> projectiles;
 
 	bn::point point_to_tilemap_pos(bn::fixed_point p_pos);
 	tile_data get_tile_at(int p_tile_x, int p_tile_y);
@@ -144,6 +158,7 @@ private:
 
 public:
 	void spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity);
+	void spawn_projectile(bn::fixed_point p_position, bn::fixed_point p_velocity);
 
 	struct raycast_hit {
 		bn::point tile_pos;

@@ -74,9 +74,6 @@ private:
 	bn::seed_random _rng;
 	int _frame;
 
-	bn::point _laser_target_cell;
-	int _mining_timer;
-
 	bn::optional<bn::regular_bg_ptr> _bg_bg;
 
 	alignas(int) bn::regular_bg_map_cell _tilemap_cells[mining_state::TILEMAP_MAX_CELLS];
@@ -99,6 +96,7 @@ private:
 	bn::optional<bn::dp_direct_bitmap_bg_ptr> _scan_map_bg;
 
 	bn::vector<bn::sprite_ptr, mining_state::MAX_VISIBLE_OBJS> _obj_sprites;
+	bn::vector<bn::sprite_ptr, mining_state::MAX_VISIBLE_PROJECTILES> _proj_sprites;
 	int _obj_flicker_frame;
 
 	void _pause(bool p_show_radar);

@@ -11,7 +11,8 @@ mining_state::mining_state(shared_state &p_shared) :
 		state(),
 		_shared(p_shared),
 		_rng(),
-		objects() {
+		objects(),
+		projectiles() {
 	BN_ASSERT(helpers::is_point_in_view(bn::point(0, 0), bn::point(-120, 0), 0));
 	BN_ASSERT(!helpers::is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
 
@@ -252,6 +253,17 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 	objects.push_front(obj);
 }
 
+void mining_state::spawn_projectile(bn::fixed_point p_position, bn::fixed_point p_velocity) {
+	if (projectiles.full()) {
+		// make room
+		projectiles.pop_back();
+	}
+
+	projectile proj(*this, p_position, p_velocity);
+
+	projectiles.push_front(proj);
+}
+
 bn::optional<mining_state::raycast_hit> mining_state::raycast(bn::fixed_point p_origin, bn::fixed_point p_dir, bn::fixed p_max_distance) {
 	bn::optional<mining_state::raycast_hit> hit;
 
@@ -425,31 +437,70 @@ void mining_state::update() {
 		ship_invincible_timer--;
 	}
 
-	bool hit = false;
+	// collision
 
+	bool hit = false;
 	if (
 			is_solid_tile(space_point_to_tile_point(final_aabb.top_left())) //
 			|| is_solid_tile(space_point_to_tile_point(final_aabb.top_right())) //
 			|| is_solid_tile(space_point_to_tile_point(final_aabb.bottom_left())) //
 			|| is_solid_tile(space_point_to_tile_point(final_aabb.bottom_right()))) {
 		hit = true;
-
 		if (ship_invincible_timer == 0) {
 			auto speed = helpers::point_length(ship_velocity);
 			if (speed > 0.72) {
 				take_damage(3);
 			}
 		}
-
 		ship_velocity = ship_velocity * bn::fixed(-0.6);
 	}
 
 	ship_hitbox = hit ? ship_hitbox : final_aabb;
 
+	// process abilities
+
+	const bn::fixed max_dist = 64;
+
+	auto targetting_hit = raycast(ship_hitbox.center(), -helpers::angle_to_dir(-ship_rotation), max_dist);
+	_aim_direction = -helpers::set_length(helpers::angle_to_dir(-ship_rotation), max_dist - 4.0);
+
+	if (targetting_hit.has_value()) {
+		auto dist = helpers::distance(ship_hitbox.center(), targetting_hit.value().intersection_pos);
+		_aim_direction = targetting_hit.value().intersection_pos - ship_hitbox.position();
+
+		auto new_tile = targetting_hit.value().tile_pos;
+		if (new_tile != _laser_target_cell) {
+			_mining_timer = 0;
+			_laser_target_cell = new_tile;
+		}
+
+		if (bn::keypad::r_held()) {
+			_mining_timer++;
+			if (_mining_timer >= 30) {
+				mine_tile(_laser_target_cell.value());
+				_mining_timer = 0;
+			}
+		} else {
+			_mining_timer = 0;
+		}
+	} else {
+		_mining_timer = 0;
+		_laser_target_cell.reset();
+	}
+
+	// process entities
+
 	for (auto it = objects.begin(); it != objects.end(); ++it) {
 		auto &obj = *it;
 		if (!obj.update()) {
 			objects.erase(it);
+		}
+	}
+
+	for (auto it = projectiles.begin(); it != projectiles.end(); ++it) {
+		auto &obj = *it;
+		if (!obj.update()) {
+			projectiles.erase(it);
 		}
 	}
 
