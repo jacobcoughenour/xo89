@@ -180,9 +180,39 @@ void mining_state::bake_lighting() {
 }
 
 void mining_state::place_entities() {
-	turret test(*this, bn::point(SPACE_TILE_WIDTH / 2 * TILE_SIZE_PX, TILE_SIZE_PX * 4));
+	for (int chunk_x = 0; chunk_x < SPACE_SIZE; chunk_x++) {
+		for (int chunk_y = 0; chunk_y < SPACE_SIZE; chunk_y++) {
+			if (_rng.get_int(2) != 0) {
+				continue;
+			}
 
-	turrets.push_back(test);
+			bool found = false;
+			for (int x = chunk_x * CHUNK_TILE_WIDTH; x < (chunk_x + 1) * CHUNK_TILE_WIDTH; x++) {
+				if (found) {
+					break;
+				}
+				for (int y = chunk_y * CHUNK_TILE_WIDTH; y < (chunk_y + 1) * CHUNK_TILE_WIDTH; y++) {
+					if (is_solid_tile(bn::point(x, y))) {
+						continue;
+					}
+
+					if ((static_cast<unsigned char>(is_solid_tile(bn::point(x + 1, y))) + static_cast<unsigned char>(is_solid_tile(bn::point(x, y - 1))) + static_cast<unsigned char>(is_solid_tile(bn::point(x, y + 1))) + static_cast<unsigned char>(is_solid_tile(bn::point(x - 1, y)))) != (unsigned char)(1)) {
+						continue;
+					}
+
+					turret test(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
+					turrets.push_back(test);
+
+					if (turrets.size() >= MAX_TURRETS) {
+						return;
+					}
+
+					found = true;
+					break;
+				}
+			}
+		}
+	}
 }
 
 void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
