@@ -6,10 +6,12 @@
 
 #include "entities/floating_item.h"
 #include "entities/projectile.h"
+#include "entities/turret.h"
 
 #include "bn_array.h"
 #include "bn_bg_palettes.h"
 #include "bn_bg_tiles.h"
+#include "bn_camera_ptr.h"
 #include "bn_common.h"
 #include "bn_fixed_rect.h"
 #include "bn_keypad.h"
@@ -69,6 +71,7 @@ public:
 
 	static const int MAX_VISIBLE_PROJECTILES = 16;
 	static const int MAX_PROJECTILES = MAX_VISIBLE_PROJECTILES * 2;
+	static const int MAX_TURRETS = 16;
 
 	static const int CHUNK_SIZE = 128;
 	static const int SPACE_SIZE = 16;
@@ -117,6 +120,7 @@ private:
 	int _mining_duration = 30;
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
+	bn::optional<bn::fixed_point> _target_entity_pos;
 
 	int _fire_timer;
 	int _fire_cooldown = 8;
@@ -128,11 +132,13 @@ public:
 	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
 	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
 	bn::fixed_point get_aim_direction() { return _aim_direction; }
+	bn::optional<bn::fixed_point> get_target_entity_pos() { return _target_entity_pos; }
 
 	void generate_next_chunk();
 	int generated_chunks_count();
 	bool is_generated();
 	void bake_lighting();
+	void place_entities();
 
 	bn::fixed_point spawn_point();
 
@@ -148,6 +154,12 @@ public:
 
 	void take_damage(unsigned int p_damage_amount);
 
+private:
+	bn::camera_ptr _camera;
+
+public:
+	inline bn::camera_ptr get_camera() { return _camera; }
+
 	// do we want to combine these into a "transform"?
 	bn::fixed_rect ship_hitbox;
 	// start pointing down
@@ -158,6 +170,8 @@ public:
 
 	bn::list<floating_item, MAX_OBJS> objects;
 	bn::list<projectile, MAX_PROJECTILES> projectiles;
+
+	bn::list<turret, MAX_TURRETS> turrets;
 
 	bn::point point_to_tilemap_pos(bn::fixed_point p_pos);
 	tile_data get_tile_at(int p_tile_x, int p_tile_y);
@@ -171,7 +185,7 @@ private:
 
 public:
 	void spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity);
-	void spawn_projectile(bn::fixed_point p_position, bn::fixed_point p_velocity);
+	void spawn_projectile(bool p_from_player, unsigned int p_damage_amount, bn::fixed_point p_position, bn::fixed_point p_velocity);
 
 	struct raycast_hit {
 		bn::point tile_pos;

@@ -21,7 +21,6 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		scene(p_shared),
 		_state(p_state),
 		_small_text(common::fixed_8x8_sprite_font),
-		_camera(bn::camera_ptr::create(0, 0)),
 		_rng(1),
 		_tilemap_item(_tilemap_cells[0], bn::size(mining_state::TILEMAP_CELLS_SIZE, mining_state::TILEMAP_CELLS_SIZE)),
 		_breaking_sprite(bn::sprite_items::breaking.create_sprite()),
@@ -30,10 +29,10 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	_abandon_selected = false;
 	_pause_tab = pause_menu_tab::NONE;
 
-	_breaking_sprite.set_camera(_camera);
+	_breaking_sprite.set_camera(_state.get_camera());
 	_breaking_sprite.set_visible(false);
 	_breaking_sprite.set_bg_priority(0);
-	_crosshair_sprite.set_camera(_camera);
+	_crosshair_sprite.set_camera(_state.get_camera());
 	_crosshair_sprite.set_visible(false);
 	_crosshair_sprite.set_bg_priority(0);
 
@@ -66,6 +65,13 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	_small_text.generate(0, -6, text, _text_sprites);
 	bn::core::update();
 	_state.bake_lighting();
+
+	_text_sprites.clear();
+	text.clear();
+	text_stream.append("Placing Entities...");
+	_small_text.generate(0, -6, text, _text_sprites);
+	bn::core::update();
+	_state.place_entities();
 
 	_text_sprites.clear();
 
@@ -207,9 +213,9 @@ void mining_scene::_unpause() {
 
 	_tilemap_bg = _tilemap_bg_item->create_bg(0, 0);
 	_tilemap_bg->set_priority(2);
-	_tilemap_bg->set_camera(_camera);
+	_tilemap_bg->set_camera(_state.get_camera());
 
-	_tilemap_loaded_point = _state.point_to_tilemap_pos(_camera.position());
+	_tilemap_loaded_point = _state.point_to_tilemap_pos(_state.get_camera().position());
 	_update_tilemap();
 
 	_bg_bg = bn::regular_bg_items::green_bg.create_bg();
@@ -221,12 +227,12 @@ void mining_scene::_unpause() {
 	_bg_bg->set_priority(3);
 	_ship_laser->set_priority(2);
 
-	_ship_laser->set_camera(_camera);
+	_ship_laser->set_camera(_state.get_camera());
 	_ship_laser->set_wrapping_enabled(false);
 	_ship_laser->set_pivot_position(bn::point(0, 64));
 
 	_ship_sprite = bn::sprite_items::ship.create_sprite();
-	_ship_sprite->set_camera(_camera);
+	_ship_sprite->set_camera(_state.get_camera());
 	_ship_sprite->set_bg_priority(0);
 	_ship_sprite->set_position(_state.ship_hitbox.position());
 
@@ -491,7 +497,7 @@ void mining_scene::_update_space() {
 
 	_ship_sprite->set_visible((_state.ship_invincible_timer / 2) % 2 == 0);
 
-	_bg_bg->set_position(-_camera.position() / 2);
+	_bg_bg->set_position(-_state.get_camera().position() / 2);
 
 	auto aim_dir = _state.get_aim_direction();
 	auto crosshair_target_pos = _state.ship_hitbox.center() + aim_dir;
@@ -542,9 +548,6 @@ void mining_scene::_update_space() {
 	}
 	_crosshair_sprite.set_tiles(bn::sprite_items::crosshair.tiles_item().create_tiles(_crosshair_frame / 2));
 
-	// keep camera on the ship
-	_camera.set_position(_state.ship_hitbox.position());
-
 	bn::point tilemap_pos = _state.point_to_tilemap_pos(_state.ship_hitbox.position());
 
 	if (tilemap_pos != _tilemap_loaded_point || _state.is_tileset_dirty) {
@@ -567,7 +570,7 @@ void mining_scene::_update_space() {
 
 		sprite_flicker_index++;
 
-		if (!helpers::is_point_in_view(_camera.position(), obj.get_position(), 8)) {
+		if (!helpers::is_point_in_view(_state.get_camera().position(), obj.get_position(), 8)) {
 			continue;
 		}
 
@@ -586,7 +589,7 @@ void mining_scene::_update_space() {
 						.create_tiles(obj.get_sprite_index()));
 		existing.set_position(obj.get_position());
 		existing.set_visible(true);
-		existing.set_camera(_camera);
+		existing.set_camera(_state.get_camera());
 		sprite_index++;
 	}
 
@@ -606,7 +609,7 @@ void mining_scene::_update_space() {
 
 		sprite_flicker_index++;
 
-		if (!helpers::is_point_in_view(_camera.position(), proj.get_position(), 8)) {
+		if (!helpers::is_point_in_view(_state.get_camera().position(), proj.get_position(), 8)) {
 			continue;
 		}
 
@@ -621,7 +624,7 @@ void mining_scene::_update_space() {
 						.create_tiles(0));
 		existing.set_position(proj.get_position());
 		existing.set_visible(true);
-		existing.set_camera(_camera);
+		existing.set_camera(_state.get_camera());
 		sprite_index++;
 	}
 

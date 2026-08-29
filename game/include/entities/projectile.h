@@ -15,11 +15,15 @@ class projectile : public entity {
 public:
 	explicit projectile(
 			mining_state &p_state,
+			bool p_from_player,
+			unsigned int p_damage_amount,
 			bn::fixed_point p_init_pos,
 			bn::fixed_point p_init_velocity);
 	bool update() override;
 
 private:
+	bool _from_player;
+	unsigned int _damage_amount;
 	bn::fixed_point _position;
 	bn::fixed_point _velocity;
 

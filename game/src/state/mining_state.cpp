@@ -11,6 +11,7 @@ mining_state::mining_state(shared_state &p_shared) :
 		state(),
 		_shared(p_shared),
 		_rng(),
+		_camera(bn::camera_ptr::create(0, 0)),
 		objects(),
 		projectiles() {
 	BN_ASSERT(helpers::is_point_in_view(bn::point(0, 0), bn::point(-120, 0), 0));
@@ -178,6 +179,12 @@ void mining_state::bake_lighting() {
 	}
 }
 
+void mining_state::place_entities() {
+	turret test(*this, bn::point(SPACE_TILE_WIDTH / 2 * TILE_SIZE_PX, TILE_SIZE_PX * 4));
+
+	turrets.push_back(test);
+}
+
 void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
 	for (auto p : _light_circles) {
 		auto relative = p_tile_pos + p;
@@ -257,13 +264,13 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 	objects.push_front(obj);
 }
 
-void mining_state::spawn_projectile(bn::fixed_point p_position, bn::fixed_point p_velocity) {
+void mining_state::spawn_projectile(bool p_from_player, unsigned int p_damage_amount, bn::fixed_point p_position, bn::fixed_point p_velocity) {
 	if (projectiles.full()) {
 		// make room
 		projectiles.pop_back();
 	}
 
-	projectile proj(*this, p_position, p_velocity);
+	projectile proj(*this, p_from_player, p_damage_amount, p_position, p_velocity);
 
 	projectiles.push_front(proj);
 }
@@ -461,6 +468,9 @@ void mining_state::update() {
 
 	ship_hitbox = hit ? ship_hitbox : final_aabb;
 
+	// keep camera on the ship
+	_camera.set_position(ship_hitbox.position());
+
 	// process abilities
 
 	const bn::fixed max_dist = 64;
@@ -469,6 +479,8 @@ void mining_state::update() {
 	_aim_direction = -helpers::set_length(helpers::angle_to_dir(-ship_rotation), max_dist - 4.0);
 
 	if (_drone_mode == drone_mode::MINING) {
+		_target_entity_pos.reset();
+
 		if (targetting_hit.has_value()) {
 			_aim_direction = targetting_hit.value().intersection_pos - ship_hitbox.position();
 
@@ -495,10 +507,23 @@ void mining_state::update() {
 	} else if (_drone_mode == drone_mode::COMBAT) {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
+		_target_entity_pos.reset();
+
+		for (auto &t : turrets) {
+			auto box_dist = helpers::max_box_dist(t.get_hitbox().center(), ship_hitbox.center());
+			if (box_dist < CHUNK_SIZE) {
+				_target_entity_pos = t.get_hitbox().center();
+				break;
+			}
+		}
+
+		if (_target_entity_pos.has_value()) {
+			_aim_direction = _target_entity_pos.value() - ship_hitbox.center();
+		}
 
 		if (bn::keypad::r_held()) {
 			if (_fire_timer == 0) {
-				spawn_projectile(ship_hitbox.center(), helpers::set_length(_aim_direction, 3.0));
+				spawn_projectile(true, 5, ship_hitbox.center(), helpers::set_length(_aim_direction, 3.0));
 				_fire_timer = _fire_cooldown;
 			}
 		}
@@ -521,6 +546,13 @@ void mining_state::update() {
 		auto &obj = *it;
 		if (!obj.update()) {
 			projectiles.erase(it);
+		}
+	}
+
+	for (auto it = turrets.begin(); it != turrets.end(); ++it) {
+		auto &obj = *it;
+		if (!obj.update()) {
+			turrets.erase(it);
 		}
 	}
 

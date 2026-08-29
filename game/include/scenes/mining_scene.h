@@ -70,7 +70,6 @@ private:
 
 	bn::sprite_text_generator _small_text;
 
-	bn::camera_ptr _camera;
 	bn::seed_random _rng;
 	int _frame;
 
@@ -105,8 +104,6 @@ private:
 	void _update_overlay_text();
 	void _update_space();
 	void _update_pause_menu();
-	void _rebuild_bgs();
-	void _destroy_bgs();
 
 	void _update_tilemap();
 	void _set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level);
