@@ -71,7 +71,7 @@ private:
 	bn::sprite_text_generator _small_text;
 
 	bn::seed_random _rng;
-	int _frame;
+	unsigned int _frame;
 
 	bn::optional<bn::regular_bg_ptr> _bg_bg;
 
@@ -82,7 +82,15 @@ private:
 	bn::point _tilemap_loaded_point;
 
 	bn::optional<bn::sprite_ptr> _ship_sprite;
-	bn::vector<bn::sprite_ptr, 3> _ship_thrust_particles;
+
+	struct particle_lifetime {
+		bn::sprite_ptr sprite;
+		unsigned char time;
+		bn::fixed_point velocity;
+	};
+	bn::vector<particle_lifetime, 5> _ship_thrust_particles;
+	unsigned char _next_thrust_particle = 0;
+	unsigned char _thrust_particle_time = 0;
 
 	bn::optional<bn::affine_bg_ptr> _ship_laser;
 
@@ -94,7 +102,7 @@ private:
 
 	bn::optional<bn::dp_direct_bitmap_bg_ptr> _scan_map_bg;
 
-	bn::vector<bn::sprite_ptr, mining_state::MAX_VISIBLE_OBJS> _obj_sprites;
+	bn::vector<bn::sprite_ptr, mining_state::MAX_VISIBLE_FLOATING_ITEMS> _floating_item_sprites;
 	bn::vector<bn::sprite_ptr, mining_state::MAX_VISIBLE_PROJECTILES> _proj_sprites;
 	int _obj_flicker_frame;
 

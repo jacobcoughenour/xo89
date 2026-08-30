@@ -1,7 +1,6 @@
 #include "state/mining_state.h"
 
-#include "entities/floating_item.h"
-
+#include "bn_bitset.h"
 #include "bn_log.h"
 #include "stb_perlin.h"
 
@@ -12,7 +11,7 @@ mining_state::mining_state(shared_state &p_shared) :
 		_shared(p_shared),
 		_rng(),
 		_camera(bn::camera_ptr::create(0, 0)),
-		objects(),
+		floating_items(),
 		projectiles() {
 	BN_ASSERT(helpers::is_point_in_view(bn::point(0, 0), bn::point(-120, 0), 0));
 	BN_ASSERT(!helpers::is_point_in_view(bn::point(0, 0), bn::point(-121, 0), 0));
@@ -190,7 +189,7 @@ void mining_state::bake_lighting() {
 void mining_state::place_entities() {
 	for (int chunk_y = 0; chunk_y < SPACE_SIZE; chunk_y++) {
 		for (int chunk_x = 0; chunk_x < SPACE_SIZE; chunk_x++) {
-			if (_rng.get_int(3) != 0) {
+			if (_rng.get_int(4) != 0) {
 				continue;
 			}
 
@@ -204,19 +203,34 @@ void mining_state::place_entities() {
 						continue;
 					}
 
-					if ((static_cast<unsigned char>(is_solid_tile(bn::point(x + 1, y))) + static_cast<unsigned char>(is_solid_tile(bn::point(x, y - 1))) + static_cast<unsigned char>(is_solid_tile(bn::point(x, y + 1))) + static_cast<unsigned char>(is_solid_tile(bn::point(x - 1, y)))) != (unsigned char)(1)) {
-						continue;
+					bn::bitset<8> n;
+					n.set(1, is_solid_tile(bn::point(x, y - 1)));
+					n.set(2, is_solid_tile(bn::point(x, y + 1)));
+					n.set(3, is_solid_tile(bn::point(x - 1, y)));
+					n.set(4, is_solid_tile(bn::point(x + 1, y)));
+					int solid = n.count();
+
+					if (solid == 0) {
+						creep ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
+						creeps.push_back(ent);
+
+						if (creeps.size() == MAX_CREEPS) {
+							return;
+						}
+
+						found = true;
+						break;
+					} else if (solid == 1) {
+						turret ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
+						turrets.push_back(ent);
+
+						if (turrets.size() == MAX_TURRETS) {
+							return;
+						}
+
+						found = true;
+						break;
 					}
-
-					turret test(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
-					turrets.push_back(test);
-
-					if (turrets.size() >= MAX_TURRETS) {
-						return;
-					}
-
-					found = true;
-					break;
 				}
 			}
 		}
@@ -286,9 +300,9 @@ bool mining_state::can_mine_tile(bn::point p_pos) {
 }
 
 void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
-	if (objects.full()) {
+	if (floating_items.full()) {
 		// make room
-		objects.pop_back();
+		floating_items.pop_back();
 	}
 
 	// todo you can do better (lut?)
@@ -299,7 +313,7 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 
 	floating_item obj(*this, p_type, sprite_index, p_position, p_velocity);
 
-	objects.push_front(obj);
+	floating_items.push_front(obj);
 }
 
 void mining_state::spawn_projectile(bool p_from_player, unsigned int p_damage_amount, bn::fixed_point p_position, bn::fixed_point p_velocity) {
@@ -470,6 +484,9 @@ void mining_state::update() {
 
 	if (bn::keypad::a_held()) {
 		ship_velocity -= helpers::angle_to_dir(-ship_rotation) * bn::fixed(0.045);
+		_is_thrusting = true;
+	} else {
+		_is_thrusting = false;
 	}
 	if (bn::keypad::b_held()) {
 		ship_velocity += helpers::angle_to_dir(-ship_rotation) * bn::fixed(0.035);
@@ -549,10 +566,20 @@ void mining_state::update() {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
 
-		if (bn::keypad::r_pressed()) {
-			_target_entity == nullptr;
-
+		if (!bn::keypad::r_held() && _target_entity == nullptr) {
 			for (auto &t : turrets) {
+				auto target_pos = t.get_hitbox().center();
+				if (!helpers::box_dist_test(target_pos, ship_center, max_dist)) {
+					continue;
+				}
+				auto dir = -helpers::dir_to_angle_deg(ship_center - target_pos);
+				if (!helpers::is_deg_within_range(dir, ship_rotation, 15)) {
+					continue;
+				}
+				_target_entity = &t;
+				break;
+			}
+			for (auto &t : creeps) {
 				auto target_pos = t.get_hitbox().center();
 				if (!helpers::box_dist_test(target_pos, ship_center, max_dist)) {
 					continue;
@@ -572,7 +599,7 @@ void mining_state::update() {
 				_aim_direction = pos - ship_center;
 			} else {
 				_aim_direction = default_aim;
-				_target_entity == nullptr;
+				_target_entity = nullptr;
 			}
 		} else {
 			_aim_direction = default_aim;
@@ -580,7 +607,7 @@ void mining_state::update() {
 
 		if (bn::keypad::r_held()) {
 			if (_fire_timer == 0) {
-				spawn_projectile(true, 5, ship_center, helpers::set_length(_aim_direction, 3.0));
+				spawn_projectile(true, 5, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
 				_fire_timer = _fire_cooldown;
 			}
 		}
@@ -592,10 +619,10 @@ void mining_state::update() {
 
 	// process entities
 
-	for (auto it = objects.begin(); it != objects.end(); ++it) {
+	for (auto it = floating_items.begin(); it != floating_items.end(); ++it) {
 		auto &obj = *it;
 		if (!obj.update()) {
-			objects.erase(it);
+			floating_items.erase(it);
 		}
 	}
 
@@ -616,6 +643,19 @@ void mining_state::update() {
 				_target_entity = nullptr;
 			}
 			turrets.erase(it);
+		}
+	}
+
+	for (auto it = creeps.begin(); it != creeps.end(); ++it) {
+		auto &obj = *it;
+		if (!helpers::box_dist_test(ship_hitbox.center(), obj.get_hitbox().center(), 128)) {
+			continue;
+		}
+		if (!obj.update()) {
+			if (_target_entity == &obj) {
+				_target_entity = nullptr;
+			}
+			creeps.erase(it);
 		}
 	}
 

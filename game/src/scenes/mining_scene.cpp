@@ -12,6 +12,8 @@
 #include "bn_sprite_items_dev32.h"
 #include "bn_sprite_items_dev8.h"
 #include "bn_sprite_items_dropped_items.h"
+#include "bn_sprite_items_poof.h"
+#include "bn_sprite_items_projectile.h"
 #include "bn_sprite_items_ship.h"
 #include "bn_sprite_items_ship2x.h"
 
@@ -35,6 +37,18 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	_crosshair_sprite.set_camera(_state.get_camera());
 	_crosshair_sprite.set_visible(false);
 	_crosshair_sprite.set_bg_priority(0);
+
+	for (int i = 0; i < _ship_thrust_particles.max_size(); i++) {
+		auto s = bn::sprite_items::poof.create_sprite();
+		s.set_camera(_state.get_camera());
+		s.set_visible(false);
+		s.set_vertical_flip(i % 2 == 0);
+		s.set_horizontal_flip((i + 1) % 4 == 0);
+		_ship_thrust_particles.push_back(particle_lifetime{
+				.sprite = s,
+				.time = 0,
+		});
+	}
 
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 	bn::string<34> text;
@@ -185,8 +199,16 @@ void mining_scene::_pause(bool p_show_radar) {
 	_ship_sprite.reset();
 	_crosshair_sprite.set_visible(false);
 
-	for (int i = 0; i < _obj_sprites.size(); i++) {
-		_obj_sprites.at(i).set_visible(false);
+	for (int i = 0; i < _floating_item_sprites.size(); i++) {
+		_floating_item_sprites.at(i).set_visible(false);
+	}
+
+	for (int i = 0; i < _proj_sprites.size(); i++) {
+		_proj_sprites.at(i).set_visible(false);
+	}
+
+	for (int i = 0; i < _ship_thrust_particles.size(); i++) {
+		_ship_thrust_particles.at(i).sprite.set_visible(false);
 	}
 
 	_pause_tab = p_show_radar ? pause_menu_tab::SCANNER : pause_menu_tab::INVENTORY;
@@ -492,9 +514,7 @@ void mining_scene::_update_space() {
 
 	_ship_sprite->set_tiles(bn::sprite_items::ship.tiles_item()
 					.create_tiles((((_state.ship_rotation / bn::fixed(360.0)) * 32 - 0.5).integer() + 32) % 32));
-
 	_ship_sprite->set_position(_state.ship_hitbox.position());
-
 	_ship_sprite->set_visible((_state.ship_invincible_timer / 2) % 2 == 0);
 
 	_bg_bg->set_position(-_state.get_camera().position() / 2);
@@ -556,15 +576,42 @@ void mining_scene::_update_space() {
 		_state.is_tileset_dirty = false;
 	}
 
-	// render the objects
+	if (_state.is_thrusting() && _thrust_particle_time == 0) {
+		auto &p = _ship_thrust_particles.at(_next_thrust_particle);
+		p.time = 60;
+		auto dir = helpers::angle_to_dir(-_state.ship_rotation);
+		p.sprite.set_position(_state.ship_hitbox.center() + helpers::set_length(dir, 8.0));
+		p.velocity = helpers::set_length(dir, 0.8);
+		_thrust_particle_time = 4;
+		_next_thrust_particle = (_next_thrust_particle + 1) % _ship_thrust_particles.max_size();
+	}
+
+	if (_thrust_particle_time > 0) {
+		_thrust_particle_time--;
+	}
+
+	for (auto &obj : _ship_thrust_particles) {
+		// obj.tiles
+		if (obj.time == 0) {
+			obj.sprite.set_visible(false);
+		} else {
+			obj.sprite.set_visible(true);
+			obj.time--;
+			obj.sprite.set_tiles(bn::sprite_items::poof.tiles_item()
+							.create_tiles(bn::clamp((70 - obj.time) / 10, 1, 3)));
+			obj.sprite.set_position(obj.sprite.position() + obj.velocity);
+		}
+	}
+
+	// render the floating_items
 
 	int sprite_index = 0;
 	int sprite_flicker_index = -1;
 
 	int flicker_frame = _obj_flicker_frame / 10;
 
-	for (auto obj : _state.objects) {
-		if (sprite_index >= mining_state::MAX_VISIBLE_OBJS) {
+	for (auto obj : _state.floating_items) {
+		if (sprite_index >= mining_state::MAX_VISIBLE_FLOATING_ITEMS) {
 			break;
 		}
 
@@ -574,17 +621,17 @@ void mining_scene::_update_space() {
 			continue;
 		}
 
-		BN_ASSERT(sprite_index <= _obj_sprites.size());
+		BN_ASSERT(sprite_index <= _floating_item_sprites.size());
 
-		if (sprite_flicker_index >= mining_state::MAX_VISIBLE_OBJS / 2 && flicker_frame % 2 == sprite_flicker_index % 2) {
+		if (sprite_flicker_index >= mining_state::MAX_VISIBLE_FLOATING_ITEMS / 2 && flicker_frame % 2 == sprite_flicker_index % 2) {
 			continue;
 		}
 
-		if (sprite_index == _obj_sprites.size()) {
+		if (sprite_index == _floating_item_sprites.size()) {
 			// add sprite
-			_obj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
+			_floating_item_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
 		}
-		bn::sprite_ptr &existing = _obj_sprites.at(sprite_index);
+		bn::sprite_ptr &existing = _floating_item_sprites.at(sprite_index);
 		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
 						.create_tiles(obj.get_sprite_index()));
 		existing.set_position(obj.get_position());
@@ -596,8 +643,8 @@ void mining_scene::_update_space() {
 	_obj_flicker_frame = (_obj_flicker_frame + 1) % 60;
 
 	// hide unused
-	for (; sprite_index < _obj_sprites.size(); sprite_index++) {
-		_obj_sprites.at(sprite_index).set_visible(false);
+	for (; sprite_index < _floating_item_sprites.size(); sprite_index++) {
+		_floating_item_sprites.at(sprite_index).set_visible(false);
 	}
 
 	sprite_index = 0;
@@ -617,11 +664,11 @@ void mining_scene::_update_space() {
 
 		if (sprite_index == _proj_sprites.size()) {
 			// add sprite
-			_proj_sprites.push_back(bn::sprite_items::dropped_items.create_sprite());
+			_proj_sprites.push_back(bn::sprite_items::projectile.create_sprite());
 		}
 		bn::sprite_ptr &existing = _proj_sprites.at(sprite_index);
-		existing.set_tiles(bn::sprite_items::dropped_items.tiles_item()
-						.create_tiles(0));
+		existing.set_tiles(bn::sprite_items::projectile.tiles_item()
+						.create_tiles(proj.get_frame()));
 		existing.set_position(proj.get_position());
 		existing.set_visible(true);
 		existing.set_camera(_state.get_camera());

@@ -28,6 +28,11 @@ func main() {
 		fmt.Println("error creating ship sprites:", err)
 	}
 
+	err = createParticleSprites()
+	if err != nil {
+		fmt.Println("error creating particle sprites:", err)
+	}
+
 	fmt.Println("converting interior image to bmp")
 	img, _, _, err := loadImage("ship_interior", 1024, 160, 0)
 	if err != nil {
@@ -106,6 +111,50 @@ func createShipSprites() error {
 		return err
 	}
 	if err := bmp.Encode(f, processed2x); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createParticleSprites() error {
+	total_frames := 16
+
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 8, Y: 8 * total_frames}})
+	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+
+	for i := range total_frames {
+
+		img, _, _, err := loadImage(fmt.Sprintf("projectile_frames/%04d", i+1), 64, 64, 0)
+		if err != nil {
+			return err
+		}
+
+		scaled := transform.Resize(img, 8, 8, transform.NearestNeighbor)
+
+		draw.Draw(
+			canvas,
+			image.Rect(0, i*8, 16, 8+i*8),
+			scaled,
+			image.Point{0, 0},
+			draw.Over)
+	}
+
+	processed := reducedToPaletted(canvas, nil)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/projectile.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed); err != nil {
 		f.Close()
 		return err
 	}

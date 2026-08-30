@@ -4,9 +4,10 @@
 #include "items.h"
 #include "shared_state.h"
 
+#include "entities/creep.h"
+#include "entities/entity.h"
 #include "entities/floating_item.h"
 #include "entities/projectile.h"
-#include "entities/targetable.h"
 #include "entities/turret.h"
 
 #include "bn_array.h"
@@ -67,13 +68,15 @@ enum class drone_mode : unsigned char {
 
 class mining_state : public state {
 public:
-	static const int MAX_VISIBLE_OBJS = 16;
-	static const int MAX_OBJS = MAX_VISIBLE_OBJS * 2;
+	static const int MAX_VISIBLE_FLOATING_ITEMS = 16;
+	static const int MAX_FLOATING_ITEMS = MAX_VISIBLE_FLOATING_ITEMS * 2;
 
 	static const int MAX_VISIBLE_PROJECTILES = 16;
 	static const int MAX_PROJECTILES = MAX_VISIBLE_PROJECTILES * 2;
 
-	static const int MAX_TURRETS = 32;
+	static const int MAX_TURRETS = 64;
+	static const int MAX_CREEPS = 64;
+	static const int MAX_ENTITIES = MAX_TURRETS + MAX_CREEPS;
 
 	static const int CHUNK_SIZE = 128;
 	static const int SPACE_SIZE = 16;
@@ -117,12 +120,13 @@ private:
 	void _recalculate_lighting(bn::point p_tile_pos);
 
 	drone_mode _drone_mode = drone_mode::MINING;
+	bool _is_thrusting = false;
 
 	int _mining_timer;
 	int _mining_duration = 30;
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
-	targetable *_target_entity;
+	combat_entity *_target_entity;
 
 	int _fire_timer;
 	int _fire_cooldown = 16;
@@ -130,6 +134,7 @@ private:
 public:
 	drone_mode get_drone_mode() { return _drone_mode; }
 	void set_drone_mode(drone_mode p_drone_mode);
+	bool is_thrusting() { return _is_thrusting; }
 
 	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
 	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
@@ -169,10 +174,10 @@ public:
 	unsigned int ship_health = 100;
 	unsigned int ship_invincible_timer = 0;
 
-	bn::list<floating_item, MAX_OBJS> objects;
+	bn::list<floating_item, MAX_FLOATING_ITEMS> floating_items;
 	bn::list<projectile, MAX_PROJECTILES> projectiles;
-
 	bn::list<turret, MAX_TURRETS> turrets;
+	bn::list<creep, MAX_CREEPS> creeps;
 
 	bn::point point_to_tilemap_pos(bn::fixed_point p_pos);
 	tile_data get_tile_at(int p_tile_x, int p_tile_y);

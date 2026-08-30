@@ -1,9 +1,9 @@
 #pragma once
 
+#include "combat_entity.h"
 #include "entity.h"
 #include "helpers.h"
 #include "items.h"
-#include "targetable.h"
 
 #include "bn_fixed.h"
 #include "bn_fixed_point.h"
@@ -15,7 +15,7 @@ namespace game {
 
 class mining_state;
 
-class turret : public entity, public targetable {
+class turret : public combat_entity {
 public:
 	explicit turret(
 			mining_state &p_state,
@@ -24,13 +24,7 @@ public:
 
 private:
 	bn::sprite_ptr _sprite;
-	bn::fixed_rect _hitbox;
-	unsigned int _health;
 	unsigned int _fire_cooldown;
-
-public:
-	void take_damage(unsigned int p_damage_amount);
-	bn::fixed_rect get_hitbox() { return _hitbox; }
 };
 
 } //namespace game

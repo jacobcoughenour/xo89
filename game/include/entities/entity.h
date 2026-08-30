@@ -7,6 +7,13 @@ namespace game {
 
 class mining_state;
 
+enum class entity_type {
+	FLOATING_ITEM,
+	PROJECTILE,
+	TURRET,
+	CREEP
+};
+
 class entity {
 protected:
 	entity(mining_state &p_state) :

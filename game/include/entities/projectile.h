@@ -26,10 +26,12 @@ private:
 	unsigned int _damage_amount;
 	bn::fixed_point _position;
 	bn::fixed_point _velocity;
+	int _frame;
 
 public:
 	bn::fixed_point get_position() { return _position; }
 	bn::fixed_point get_velocity() { return _velocity; }
+	int get_frame() { return _frame; }
 };
 
 } //namespace game

@@ -208,4 +208,5 @@ public:
 		return true;
 	}
 };
+
 } //namespace game
