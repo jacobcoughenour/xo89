@@ -71,18 +71,28 @@ public:
 		return value;
 	}
 
-	static inline const bn::fixed_point rad_to_dir(bn::fixed rad) {
-		rad /= PI_2;
-		return bn::fixed_point(bn::sin(rad), bn::cos(rad));
+	static inline const bn::fixed_point rad_to_dir(bn::fixed p_rad) {
+		p_rad /= PI_2;
+		return bn::fixed_point(bn::sin(p_rad), bn::cos(p_rad));
 	}
 
-	static inline const bn::fixed_point angle_to_dir(bn::fixed angle) {
-		const auto p = bn::degrees_lut_sin_and_cos_safe(angle);
+	static inline const bn::fixed_point angle_to_dir(bn::fixed p_angle) {
+		const auto p = bn::degrees_lut_sin_and_cos_safe(p_angle);
 		return bn::fixed_point(p.first, p.second);
 	}
 
-	static inline const bn::fixed dir_to_angle_deg(bn::point point) {
-		return bn::degrees_atan2(point.x(), point.y());
+	static inline const bn::fixed dir_to_angle_deg(bn::fixed_point p_point) {
+		return bn::degrees_atan2(p_point.x().integer(), p_point.y().integer());
+	}
+
+	static inline bool is_deg_within_range(bn::fixed p_a, bn::fixed p_b, bn::fixed p_range) {
+		p_a = fposmod(p_a, 360);
+		p_b = fposmod(p_b, 360);
+		auto diff = bn::abs(p_a - p_b);
+		if (diff > 180) {
+			return 360 - diff < p_range;
+		}
+		return diff <= p_range;
 	}
 
 	static constexpr double PI = 3.1415926535897932384626433832795;

@@ -23,6 +23,14 @@ mining_state::mining_state(shared_state &p_shared) :
 
 	BN_ASSERT(space_point_to_tile_point(bn::fixed_point(-0.4, -2)) == bn::point(-1, -1), space_point_to_tile_point(bn::fixed_point(-0.4, -2)).x());
 
+	BN_ASSERT(helpers::is_deg_within_range(0, 0, 10));
+	BN_ASSERT(helpers::is_deg_within_range(-5, 5, 30));
+	BN_ASSERT(helpers::is_deg_within_range(-5, 150, 30) == false);
+
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, -1)) == bn::fixed(180));
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, -5)) == bn::fixed(180));
+	BN_ASSERT(helpers::dir_to_angle_deg(helpers::angle_to_dir(90)) == 90);
+
 	_rng.set_seed(p_shared.get_frame_count());
 	_seed = _rng.get_int();
 	clear_inventory();
@@ -180,9 +188,9 @@ void mining_state::bake_lighting() {
 }
 
 void mining_state::place_entities() {
-	for (int chunk_x = 0; chunk_x < SPACE_SIZE; chunk_x++) {
-		for (int chunk_y = 0; chunk_y < SPACE_SIZE; chunk_y++) {
-			if (_rng.get_int(2) != 0) {
+	for (int chunk_y = 0; chunk_y < SPACE_SIZE; chunk_y++) {
+		for (int chunk_x = 0; chunk_x < SPACE_SIZE; chunk_x++) {
+			if (_rng.get_int(3) != 0) {
 				continue;
 			}
 
@@ -498,21 +506,23 @@ void mining_state::update() {
 
 	ship_hitbox = hit ? ship_hitbox : final_aabb;
 
+	auto ship_center = ship_hitbox.center();
+
 	// keep camera on the ship
-	_camera.set_position(ship_hitbox.position());
+	_camera.set_position(ship_center);
 
 	// process abilities
 
 	const bn::fixed max_dist = 64;
 
 	auto targetting_hit = raycast(ship_hitbox.center(), -helpers::angle_to_dir(-ship_rotation), max_dist);
-	_aim_direction = -helpers::set_length(helpers::angle_to_dir(-ship_rotation), max_dist - 4.0);
+	auto default_aim = -helpers::set_length(helpers::angle_to_dir(-ship_rotation), max_dist - 4.0);
 
 	if (_drone_mode == drone_mode::MINING) {
-		_target_entity_pos.reset();
+		_target_entity = nullptr;
 
 		if (targetting_hit.has_value()) {
-			_aim_direction = targetting_hit.value().intersection_pos - ship_hitbox.position();
+			_aim_direction = targetting_hit.value().intersection_pos - ship_center;
 
 			auto new_tile = targetting_hit.value().tile_pos;
 
@@ -533,27 +543,44 @@ void mining_state::update() {
 		} else {
 			_mining_timer = 0;
 			_laser_target_cell.reset();
+			_aim_direction = default_aim;
 		}
 	} else if (_drone_mode == drone_mode::COMBAT) {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
-		_target_entity_pos.reset();
 
-		for (auto &t : turrets) {
-			auto box_dist = helpers::max_box_dist(t.get_hitbox().center(), ship_hitbox.center());
-			if (box_dist < CHUNK_SIZE) {
-				_target_entity_pos = t.get_hitbox().center();
+		if (bn::keypad::r_pressed()) {
+			_target_entity == nullptr;
+
+			for (auto &t : turrets) {
+				auto target_pos = t.get_hitbox().center();
+				if (!helpers::box_dist_test(target_pos, ship_center, max_dist)) {
+					continue;
+				}
+				auto dir = -helpers::dir_to_angle_deg(ship_center - target_pos);
+				if (!helpers::is_deg_within_range(dir, ship_rotation, 15)) {
+					continue;
+				}
+				_target_entity = &t;
 				break;
 			}
 		}
 
-		if (_target_entity_pos.has_value()) {
-			_aim_direction = _target_entity_pos.value() - ship_hitbox.center();
+		if (_target_entity != nullptr) {
+			auto pos = (*_target_entity).get_hitbox().center();
+			if (helpers::distance(pos, ship_center) < max_dist) {
+				_aim_direction = pos - ship_center;
+			} else {
+				_aim_direction = default_aim;
+				_target_entity == nullptr;
+			}
+		} else {
+			_aim_direction = default_aim;
 		}
 
 		if (bn::keypad::r_held()) {
 			if (_fire_timer == 0) {
-				spawn_projectile(true, 5, ship_hitbox.center(), helpers::set_length(_aim_direction, 3.0));
+				spawn_projectile(true, 5, ship_center, helpers::set_length(_aim_direction, 3.0));
 				_fire_timer = _fire_cooldown;
 			}
 		}
@@ -581,7 +608,13 @@ void mining_state::update() {
 
 	for (auto it = turrets.begin(); it != turrets.end(); ++it) {
 		auto &obj = *it;
+		if (!helpers::box_dist_test(ship_hitbox.center(), obj.get_hitbox().center(), 128)) {
+			continue;
+		}
 		if (!obj.update()) {
+			if (_target_entity == &obj) {
+				_target_entity = nullptr;
+			}
 			turrets.erase(it);
 		}
 	}

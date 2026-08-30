@@ -6,6 +6,7 @@
 
 #include "entities/floating_item.h"
 #include "entities/projectile.h"
+#include "entities/targetable.h"
 #include "entities/turret.h"
 
 #include "bn_array.h"
@@ -71,7 +72,8 @@ public:
 
 	static const int MAX_VISIBLE_PROJECTILES = 16;
 	static const int MAX_PROJECTILES = MAX_VISIBLE_PROJECTILES * 2;
-	static const int MAX_TURRETS = 16;
+
+	static const int MAX_TURRETS = 32;
 
 	static const int CHUNK_SIZE = 128;
 	static const int SPACE_SIZE = 16;
@@ -120,10 +122,10 @@ private:
 	int _mining_duration = 30;
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
-	bn::optional<bn::fixed_point> _target_entity_pos;
+	targetable *_target_entity;
 
 	int _fire_timer;
-	int _fire_cooldown = 8;
+	int _fire_cooldown = 16;
 
 public:
 	drone_mode get_drone_mode() { return _drone_mode; }
@@ -132,7 +134,6 @@ public:
 	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
 	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
 	bn::fixed_point get_aim_direction() { return _aim_direction; }
-	bn::optional<bn::fixed_point> get_target_entity_pos() { return _target_entity_pos; }
 
 	void generate_next_chunk();
 	int generated_chunks_count();

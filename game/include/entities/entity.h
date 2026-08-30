@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bn_bitset.h"
 #include "bn_optional.h"
 
 namespace game {

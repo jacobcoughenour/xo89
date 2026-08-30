@@ -3,6 +3,7 @@
 #include "entity.h"
 #include "helpers.h"
 #include "items.h"
+#include "targetable.h"
 
 #include "bn_fixed.h"
 #include "bn_fixed_point.h"
@@ -14,7 +15,7 @@ namespace game {
 
 class mining_state;
 
-class turret : public entity {
+class turret : public entity, public targetable {
 public:
 	explicit turret(
 			mining_state &p_state,
