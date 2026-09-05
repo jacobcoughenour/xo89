@@ -7,8 +7,8 @@
 #include "bn_blending.h"
 #include "bn_keypad.h"
 
-#include "bn_regular_bg_items_jam.h"
 #include "bn_regular_bg_items_logo.h"
+#include "bn_regular_bg_items_main_menu_bg.h"
 #include "bn_sound_items.h"
 #include "bn_sprite_items_nostabyte.h"
 #include "fonts/common_fixed_8x8_sprite_font.h"
@@ -23,6 +23,7 @@ namespace game {
 
 main_menu_scene::main_menu_scene(shared_state &p_shared) :
 		scene(p_shared),
+		_main_bg(bn::regular_bg_items::main_menu_bg.create_bg()),
 		_logo_bg(bn::regular_bg_items::logo.create_bg()),
 		_small_text(common::fixed_8x8_sprite_font),
 		_small_var_text(common::variable_8x8_sprite_font),

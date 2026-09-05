@@ -26,11 +26,11 @@ ship_scene::~ship_scene() {
 inline int _get_menu_rotation(ship_menu p_menu) {
 	switch (p_menu) {
 		case ship_menu::BOUNTIES:
-			return 200;
+			return 240;
 		case ship_menu::INVENTORY:
-			return 400;
+			return 390;
 		case ship_menu::UPGRADE:
-			return 600;
+			return 582;
 		case ship_menu::DEPLOY:
 			return 800;
 		default:
@@ -47,7 +47,7 @@ inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) 
 			stream.append("INVENTORY");
 			break;
 		case ship_menu::UPGRADE:
-			stream.append("UPGRADE");
+			stream.append("MODULES");
 			break;
 		case ship_menu::DEPLOY:
 			stream.append("DEPLOY");
@@ -106,7 +106,7 @@ bn::optional<scene_type> ship_scene::update() {
 		text.clear();
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 		_append_ship_menu_name(text_stream, _selected_ship_menu);
-		_small_text.generate(0, 64, text, _text_sprites);
+		_small_text.generate(0, -20, text, _text_sprites);
 	}
 
 	return result;
@@ -138,7 +138,7 @@ void ship_scene::_update_bounties_screen() {
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
 	text_stream.append("$");
 	helpers::append_with_padding(text_stream, _shared.get_balance(), 1, '0');
-	_small_text.generate(120, -64, text, _text_sprites);
+	_small_text.generate(100, -64, text, _text_sprites);
 
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 	_small_text.generate(0, -72, "BOUNTIES", _text_sprites);
@@ -177,7 +177,7 @@ void ship_scene::_update_inventory_screen() {
 
 	_text_sprites.clear();
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	_small_text.generate(0, -72, "SHIP INVENTORY", _text_sprites);
+	_small_text.generate(0, -72, "INVENTORY", _text_sprites);
 
 	bn::string<40> text;
 	bn::ostringstream text_stream(text);
@@ -203,7 +203,7 @@ void ship_scene::_update_upgrades_screen() {
 	}
 	_text_sprites.clear();
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	_small_text.generate(0, -72, "DRONE MODULES", _text_sprites);
+	_small_text.generate(0, -72, "MODULES", _text_sprites);
 
 	bn::string<40> text;
 	bn::ostringstream text_stream(text);

@@ -32,6 +32,7 @@ private:
 	main_menu_option _selected_menu = main_menu_option::NEW_GAME;
 	bool _option_selected = false;
 
+	bn::regular_bg_ptr _main_bg;
 	bn::regular_bg_ptr _logo_bg;
 
 	bn::sprite_text_generator _small_text;

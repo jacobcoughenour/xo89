@@ -33,6 +33,11 @@ func main() {
 		fmt.Println("error creating particle sprites:", err)
 	}
 
+	err = createMainMenuBackground()
+	if err != nil {
+		fmt.Println("error creating particle sprites:", err)
+	}
+
 	fmt.Println("converting interior image to bmp")
 	img, _, _, err := loadImage("ship_interior", 1024, 160, 0)
 	if err != nil {
@@ -150,7 +155,46 @@ func createParticleSprites() error {
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(filepath.Join(cwd, "../game/graphics/projectile.bmp"))
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createMainMenuBackground() error {
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 256, Y: 256}})
+	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+
+	img, _, _, err := loadImage("main_menu_bg0001", 1024, 1024, 0)
+	if err != nil {
+		return err
+	}
+
+	scaled := transform.Resize(img, 256, 256, transform.NearestNeighbor)
+
+	draw.Draw(
+		canvas,
+		image.Rect(0, 0, 256, 256),
+		scaled,
+		image.Point{0, 0},
+		draw.Over)
+
+	processed := reducedToPaletted(canvas, nil)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg.bmp"))
 	if err != nil {
 		return err
 	}
@@ -206,7 +250,6 @@ func reducedToPaletted(img *image.RGBA, options *ReductionOptions) *image.Palett
 		palette[i] = color.RGBA{R: c.R / 8 * 8, G: c.G / 8 * 8, B: c.B / 8 * 8, A: 255}
 		i++
 	}
-
 	// sort the palette
 	sort.Slice(palette, func(ai, bi int) bool {
 		if palette[ai] == options.clearColor {
@@ -219,6 +262,8 @@ func reducedToPaletted(img *image.RGBA, options *ReductionOptions) *image.Palett
 		bsum := br + bg + bb
 		return asum < bsum
 	})
+
+	// palette[1] = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 
 	paletted := image.NewPaletted(canvas.Bounds(), palette)
 	// draw.Draw(paletted, canvas.Bounds(), canvas, image.Point{}, draw.Over)
