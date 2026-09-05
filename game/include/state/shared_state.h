@@ -43,6 +43,7 @@ public:
 	const bounty_list &get_bounties();
 	bool collect_bounty(int p_bounty_index);
 
+	bool has_save();
 	void load();
 	void save();
 

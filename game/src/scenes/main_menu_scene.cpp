@@ -8,21 +8,26 @@
 #include "bn_keypad.h"
 
 #include "bn_regular_bg_items_jam.h"
+#include "bn_regular_bg_items_logo.h"
 #include "bn_sound_items.h"
 #include "bn_sprite_items_nostabyte.h"
 #include "fonts/common_fixed_8x8_sprite_font.h"
-#include "fonts/common_variable_16x16_sprite_font.h"
+#include "fonts/common_variable_8x8_sprite_font.h"
 
+#include "bn_sprite_items_ship2x.h"
+
+#include "bn_music.h"
 #include "bn_music_items.h"
 
 namespace game {
 
 main_menu_scene::main_menu_scene(shared_state &p_shared) :
 		scene(p_shared),
-		_big_text(common::variable_16x16_sprite_font),
-		_small_text(common::fixed_8x8_sprite_font) {
-	bn::bg_palettes::set_transparent_color(bn::color(7, 5, 11));
-
+		_logo_bg(bn::regular_bg_items::logo.create_bg()),
+		_small_text(common::fixed_8x8_sprite_font),
+		_small_var_text(common::variable_8x8_sprite_font),
+		_ship_sprite(bn::sprite_items::ship2x.create_sprite(56, 18)) {
+	bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
 	bn::music_items::title_loop.play(0.5, true);
 }
 
@@ -34,17 +39,81 @@ bn::optional<scene_type> main_menu_scene::update() {
 
 	_text_sprites.clear();
 
-	_big_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-	_big_text.generate(0, -30, "xo89", _text_sprites);
+	_logo_bg.set_visible(!_option_selected);
 
-	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
-	_small_text.generate(-80, 25, "NEW GAME", _text_sprites);
-	_small_text.generate(-80, 15, "LOAD GAME", _text_sprites);
-	_small_text.generate(-80, 35, "CREDITS", _text_sprites);
+	_frame++;
 
-	_small_text.generate(-88, 15, ">", _text_sprites);
+	_ship_sprite.set_tiles(bn::sprite_items::ship2x.tiles_item().create_tiles((_frame / 4) % 32));
 
-	// _frame += 1;
+	if (_option_selected) {
+		if (bn::keypad::b_released()) {
+			_option_selected = false;
+		}
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+
+		if (_selected_menu == main_menu_option::NEW_GAME) {
+			if (_shared.has_save()) {
+				_small_text.generate(0, -5, "OVERWRITE EXISTING SAVE DATA?", _text_sprites);
+				_small_text.generate(0, 8, "[B] NO  [A] YES", _text_sprites);
+			}
+			if (!_shared.has_save() || bn::keypad::a_released()) {
+				_shared.new_game();
+				result = scene_type::SHIP;
+				bn::music::stop();
+				return result;
+			}
+		} else if (_selected_menu == main_menu_option::LOAD_GAME) {
+			if (!_shared.has_save()) {
+				_small_text.generate(0, -5, "NO SAVE AVAILABLE", _text_sprites);
+			} else {
+				_shared.load();
+				result = scene_type::SHIP;
+				bn::music::stop();
+
+				return result;
+			}
+		} else if (_selected_menu == main_menu_option::CREDITS) {
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+			_small_var_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+
+			_small_text.generate(0, -32, "CREDITS", _text_sprites);
+
+			constexpr bn::string_view credits_text_lines[] = {
+				"3D assets by PIZZA DOGGY",
+				"Everything else by Jacob Coughenour,",
+				"Nostabyte Interactive, 12th Sep 2026.",
+				"Made with Butano Engine v21.7.1",
+			};
+
+			for (int i = 0; i < 4; i++) {
+				_small_var_text.generate(0, i * 10, credits_text_lines[i], _text_sprites);
+			}
+		}
+
+	} else {
+		int option = static_cast<int>(_selected_menu);
+		if (bn::keypad::up_released() && option > 0) {
+			option--;
+		} else if (bn::keypad::down_released() && option < 2) {
+			option++;
+		}
+		_selected_menu = static_cast<main_menu_option>(option);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+		_small_text.generate(-96, 5, "NEW GAME", _text_sprites);
+		_small_text.generate(-96, 15, "LOAD GAME", _text_sprites);
+		_small_text.generate(-96, 25, "CREDITS", _text_sprites);
+
+		_small_text.generate(-96 - 10, 5 + option * 10, ">", _text_sprites);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+		_small_text.generate(120, 76, "v1.0 JAM EDITION", _text_sprites);
+
+		if (bn::keypad::a_released()) {
+			_option_selected = true;
+		}
+	}
 
 	return result;
 }

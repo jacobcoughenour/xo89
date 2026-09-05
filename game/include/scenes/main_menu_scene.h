@@ -23,9 +23,22 @@ public:
 private:
 	int _frame = 0;
 
-	bn::sprite_text_generator _big_text;
+	enum main_menu_option {
+		NEW_GAME,
+		LOAD_GAME,
+		CREDITS
+	};
+
+	main_menu_option _selected_menu = main_menu_option::NEW_GAME;
+	bool _option_selected = false;
+
+	bn::regular_bg_ptr _logo_bg;
+
 	bn::sprite_text_generator _small_text;
-	bn::vector<bn::sprite_ptr, 32> _text_sprites;
+	bn::sprite_text_generator _small_var_text;
+	bn::vector<bn::sprite_ptr, 80> _text_sprites;
+
+	bn::sprite_ptr _ship_sprite;
 };
 
 } //namespace game

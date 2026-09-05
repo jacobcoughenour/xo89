@@ -3,11 +3,15 @@
 namespace game {
 
 shared_state::shared_state() {
-	load();
+	bn::sram::read(_saved_data);
 }
 
 void shared_state::update() {
 	_frames++;
+}
+
+bool shared_state::has_save() {
+	return _saved_data.format == 1;
 }
 
 void shared_state::new_game() {
@@ -20,14 +24,12 @@ void shared_state::new_game() {
 }
 
 void shared_state::load() {
-	bn::sram::read(_saved_data);
 	if (_saved_data.format != 1) {
 		BN_LOG("format = ", _saved_data.format);
 		BN_LOG("Failed to read save data. Creating new game.");
 		new_game();
 		save();
 	}
-
 	generate_bounties();
 }
 
