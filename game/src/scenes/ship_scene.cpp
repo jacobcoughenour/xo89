@@ -16,6 +16,8 @@ ship_scene::ship_scene(shared_state &p_shared) :
 		_small_text(common::fixed_8x8_sprite_font),
 		_pano_bg(bn::sp_direct_bitmap_bg_ptr::create()) {
 	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 0));
+
+	_shared.ensure_loaded();
 }
 
 ship_scene::~ship_scene() {
@@ -212,10 +214,58 @@ void ship_scene::_update_upgrades_screen() {
 
 	for (int i = 0; i < UPGRADE_COUNT; i++) {
 		auto info = upgrades[i];
+		auto y = bn::fixed(-40 + i * 10);
 
 		text.clear();
 		text_stream.append(info.display_name);
-		_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+
+		_small_text.generate(-80, y, text, _text_sprites);
+
+		_small_text.generate(28 - 4, y, "[", _text_sprites);
+		_small_text.generate(30 + MAX_UPGRADE_LEVEL * 4, y, "]", _text_sprites);
+		auto level = _shared.get_upgrade_level(static_cast<upgrade_type>(i));
+		for (unsigned int x = 0; x < level; x++) {
+			_small_text.generate(29 + x * 4, y, "|", _text_sprites);
+		}
+		if (level == 3) {
+			_small_text.generate(30 + (MAX_UPGRADE_LEVEL + 2) * 4, y, "MAX", _text_sprites);
+		}
+	}
+
+	if (bn::keypad::up_released() && _selected_upgrade_index > 0) {
+		_selected_upgrade_index--;
+	} else if (bn::keypad::down_released() && _selected_upgrade_index < UPGRADE_COUNT) {
+		_selected_upgrade_index++;
+	}
+
+	auto selected_buy = _selected_upgrade_index == UPGRADE_COUNT;
+
+	text.clear();
+	text_stream.append(_shared.get_remaining_upgrade_slot_count());
+	text_stream.append(" SLOTS LEFT");
+	_small_text.generate(-80, 30, text, _text_sprites);
+
+	text.clear();
+	text_stream.append("BUY UPGRADE SLOT $");
+	text_stream.append(UPGRADE_PRICE);
+	_small_text.generate(-80, 40, text, _text_sprites);
+
+	if (selected_buy) {
+		_small_text.generate(-90, 40, ">", _text_sprites);
+
+		if (bn::keypad::a_released()) {
+			_shared.buy_upgrade_slot();
+		}
+	} else {
+		_small_text.generate(-90, -40 + _selected_upgrade_index * 10, ">", _text_sprites);
+
+		auto selected_upgrade = static_cast<upgrade_type>(_selected_upgrade_index);
+
+		if (bn::keypad::right_released()) {
+			_shared.upgrade_module(selected_upgrade);
+		} else if (bn::keypad::left_released()) {
+			_shared.downgrade_module(selected_upgrade);
+		}
 	}
 }
 

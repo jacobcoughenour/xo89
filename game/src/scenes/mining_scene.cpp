@@ -754,7 +754,7 @@ void mining_scene::_update_pause_menu() {
 			int t = bn::max(size.x(), size.y());
 			int max_i = t * t;
 
-			int range = 32;
+			int range = 16 + _shared.get_upgrade_level(upgrade_type::SCANNER) * 12;
 
 			for (int i = 0; i < max_i; i++) {
 				if (

@@ -2,6 +2,7 @@
 
 #include "items.h"
 #include "state/state.h"
+#include "upgrades.h"
 
 #include "bn_assert.h"
 #include "bn_list.h"
@@ -26,6 +27,8 @@ struct save_data {
 	unsigned int format = 1;
 	int balance = 0;
 	unsigned int ship_inventory[ITEM_TYPE_COUNT];
+	unsigned int upgrade_levels[UPGRADE_COUNT];
+	unsigned int upgrade_slots = 0;
 };
 
 class shared_state : public state {
@@ -33,6 +36,7 @@ public:
 	explicit shared_state();
 	void update();
 	void new_game();
+	void ensure_loaded();
 
 	void generate_bounties();
 
@@ -43,11 +47,22 @@ public:
 	const bounty_list &get_bounties();
 	bool collect_bounty(int p_bounty_index);
 
+	void upgrade_module(upgrade_type p_type);
+	void downgrade_module(upgrade_type p_type);
+	unsigned int get_upgrade_level(upgrade_type p_type) { return bn::min((unsigned int)5, _saved_data.upgrade_levels[static_cast<int>(p_type)]); }
+	void buy_upgrade_slot();
+	unsigned int get_total_upgrade_slot_count() { return _saved_data.upgrade_slots; }
+	unsigned int get_remaining_upgrade_slot_count();
+
+	int get_mining_duration() { return 90 - (get_upgrade_level(upgrade_type::MINING_SPEED) * 25); }
+	int get_fire_cooldown() { return 25 - (get_upgrade_level(upgrade_type::FIRE_RATE) * 5); }
+
 	bool has_save();
 	void load();
 	void save();
 
 private:
+	bool _loaded;
 	bn::seed_random _rng;
 	unsigned int _frames = 0;
 	bounty_list _bounties;
@@ -56,4 +71,5 @@ private:
 
 	void _withdraw_from_inventory(item_type p_item_type, unsigned int p_amount);
 };
+
 } //namespace game

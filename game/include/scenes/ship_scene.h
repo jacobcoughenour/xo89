@@ -33,17 +33,18 @@ private:
 	bn::camera_ptr _camera;
 	bn::sprite_text_generator _small_text;
 	bn::sp_direct_bitmap_bg_ptr _pano_bg;
-	bn::vector<bn::sprite_ptr, 120> _text_sprites;
+	bn::vector<bn::sprite_ptr, 180> _text_sprites;
 
 	bn::fixed _rotation = 1024 / 2;
-	ship_menu _selected_ship_menu = ship_menu::BOUNTIES;
+	ship_menu _selected_ship_menu = ship_menu::UPGRADE;
 
-	bn::optional<ship_menu> _viewing_menu;
+	bn::optional<ship_menu> _viewing_menu = ship_menu::UPGRADE;
 
 	void _update_bounties_screen();
 	void _update_inventory_screen();
 	void _update_upgrades_screen();
 
 	int _selected_bounty_index = 0;
+	int _selected_upgrade_index = 0;
 };
 } //namespace game

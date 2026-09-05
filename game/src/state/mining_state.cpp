@@ -210,7 +210,7 @@ void mining_state::place_entities() {
 					n.set(4, is_solid_tile(bn::point(x + 1, y)));
 					int solid = n.count();
 
-					if (solid == 0) {
+					if (solid == 0 && chunk_y > 4) {
 						creep ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
 						creeps.push_back(ent);
 
@@ -458,6 +458,10 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 }
 
 void mining_state::take_damage(unsigned int p_damage_amount) {
+	auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR);
+
+	p_damage_amount = bn::max((unsigned int)1, p_damage_amount / armor);
+
 	if (p_damage_amount >= ship_health) {
 		ship_health = 0;
 	} else {
@@ -515,7 +519,10 @@ void mining_state::update() {
 		if (ship_invincible_timer == 0) {
 			auto speed = helpers::point_length(ship_velocity);
 			if (speed > 0.72) {
-				take_damage(3);
+				auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR);
+				if (armor != MAX_UPGRADE_LEVEL) {
+					take_damage(3 - armor);
+				}
 			}
 		}
 		ship_velocity = ship_velocity * bn::fixed(-0.6);
@@ -550,7 +557,8 @@ void mining_state::update() {
 
 			if (bn::keypad::r_held()) {
 				_mining_timer++;
-				if (_mining_timer >= 30) {
+
+				if (_mining_timer >= _shared.get_mining_duration()) {
 					mine_tile(_laser_target_cell.value());
 					_mining_timer = 0;
 				}
@@ -608,7 +616,7 @@ void mining_state::update() {
 		if (bn::keypad::r_held()) {
 			if (_fire_timer == 0) {
 				spawn_projectile(true, 5, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
-				_fire_timer = _fire_cooldown;
+				_fire_timer = _shared.get_fire_cooldown();
 			}
 		}
 	}

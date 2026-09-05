@@ -26,7 +26,7 @@ int main() {
 	game::tests::run_tests();
 
 	bn::unique_ptr<game::scene> current_scene;
-	bn::optional<game::scene_type> next_scene_type = game::scene_type::SPLASH;
+	bn::optional<game::scene_type> next_scene_type = game::scene_type::SHIP;
 
 	bn::unique_ptr<game::shared_state> shared_state(new game::shared_state());
 

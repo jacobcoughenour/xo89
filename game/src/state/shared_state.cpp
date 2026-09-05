@@ -16,11 +16,16 @@ bool shared_state::has_save() {
 
 void shared_state::new_game() {
 	_saved_data.format = 1;
-	_saved_data.balance = 0;
+	_saved_data.balance = 100000;
 	for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
 		_saved_data.ship_inventory[i] = 0;
 	}
+	for (int i = 0; i < UPGRADE_COUNT; i++) {
+		_saved_data.upgrade_levels[i] = 0;
+	}
+	_saved_data.upgrade_slots = 0;
 	generate_bounties();
+	_loaded = true;
 }
 
 void shared_state::load() {
@@ -31,10 +36,17 @@ void shared_state::load() {
 		save();
 	}
 	generate_bounties();
+	_loaded = true;
 }
 
 void shared_state::save() {
 	bn::sram::write(_saved_data);
+}
+
+void shared_state::ensure_loaded() {
+	if (!_loaded) {
+		new_game();
+	}
 }
 
 void shared_state::generate_bounties() {
@@ -109,6 +121,50 @@ bool shared_state::collect_bounty(int p_bounty_index) {
 	save();
 
 	return true;
+}
+
+void shared_state::upgrade_module(upgrade_type p_type) {
+	auto v = get_remaining_upgrade_slot_count();
+	if (v == 0) {
+		return;
+	}
+	auto &c = _saved_data.upgrade_levels[static_cast<int>(p_type)];
+	if (c < MAX_UPGRADE_LEVEL) {
+		c++;
+	}
+}
+
+void shared_state::downgrade_module(upgrade_type p_type) {
+	auto &c = _saved_data.upgrade_levels[static_cast<int>(p_type)];
+	if (c != 0) {
+		c--;
+	}
+}
+
+void shared_state::buy_upgrade_slot() {
+	auto bal = get_balance();
+	if (bal < UPGRADE_PRICE) {
+		return;
+	}
+	if (_saved_data.upgrade_slots >= (MAX_UPGRADE_LEVEL * UPGRADE_COUNT)) {
+		return;
+	}
+	_saved_data.balance -= UPGRADE_PRICE;
+	_saved_data.upgrade_slots++;
+}
+
+unsigned int shared_state::get_remaining_upgrade_slot_count() {
+	auto total = _saved_data.upgrade_slots;
+
+	for (size_t i = 0; i < UPGRADE_COUNT; i++) {
+		auto amount = _saved_data.upgrade_levels[i];
+		if (amount >= total) {
+			return 0;
+		}
+		total -= _saved_data.upgrade_levels[i];
+	}
+
+	return total;
 }
 
 } //namespace game

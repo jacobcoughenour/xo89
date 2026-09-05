@@ -26,18 +26,19 @@ bool floating_item::update() {
 	}
 
 	bn::fixed_point dir = helpers::normalize_point(ship_pos - _position);
+
+	auto level = _state.get_shared().get_upgrade_level(upgrade_type::MAGNET);
 	// attractor influence distance
-	// todo adjust this based on magnet upgrade
-	constexpr int d = 40;
+	int d = 30 + level * 20;
 	// push object towards ship
-	_velocity += dir * bn::min(bn::fixed(10), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
+	_velocity += dir * bn::min(bn::fixed(10 + level * 3), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
 
 	// move by velocity
 	auto obj_desired_pos = _position + _velocity;
 
 	if (_state.is_solid_tile(_state.space_point_to_tile_point(obj_desired_pos))) {
 		// bounce
-		_velocity *= bn::fixed(-0.9);
+		_velocity *= bn::fixed(-0.94);
 	} else {
 		_position = obj_desired_pos;
 		// velocity damping

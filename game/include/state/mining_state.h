@@ -111,6 +111,8 @@ public:
 
 	void update();
 
+	shared_state &get_shared() { return _shared; }
+
 private:
 	unsigned int _seed;
 	bn::seed_random _rng;
@@ -123,20 +125,18 @@ private:
 	bool _is_thrusting = false;
 
 	int _mining_timer;
-	int _mining_duration = 30;
 	bn::optional<bn::point> _laser_target_cell;
 	bn::fixed_point _aim_direction;
 	combat_entity *_target_entity;
 
 	int _fire_timer;
-	int _fire_cooldown = 16;
 
 public:
 	drone_mode get_drone_mode() { return _drone_mode; }
 	void set_drone_mode(drone_mode p_drone_mode);
 	bool is_thrusting() { return _is_thrusting; }
 
-	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_mining_duration); }
+	bn::fixed get_mining_progress() { return bn::fixed(_mining_timer) / bn::fixed(_shared.get_mining_duration()); }
 	bn::optional<bn::point> get_targeting_cell() { return _laser_target_cell; }
 	bn::fixed_point get_aim_direction() { return _aim_direction; }
 
