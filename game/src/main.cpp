@@ -10,6 +10,7 @@
 #include "scenes/scene_type.h"
 
 #include "bn_log.h"
+#include "scenes/main_menu_scene.h"
 #include "scenes/mining_scene.h"
 #include "scenes/ship_scene.h"
 #include "scenes/splash_scene.h"
@@ -25,7 +26,7 @@ int main() {
 	game::tests::run_tests();
 
 	bn::unique_ptr<game::scene> current_scene;
-	bn::optional<game::scene_type> next_scene_type = game::scene_type::SHIP;
+	bn::optional<game::scene_type> next_scene_type = game::scene_type::SPLASH;
 
 	bn::unique_ptr<game::shared_state> shared_state(new game::shared_state());
 
@@ -56,12 +57,12 @@ int main() {
 
 			// change scenes
 			switch (*next_scene_type) {
-				// case game::scene_type::SPLASH:
-				// 	current_scene.reset(new game::nostabyte_splash_scene());
-				// 	break;
-				// case game::scene_type::MAIN_MENU:
-				// 	current_scene.reset(new game::main_menu_scene(*shared));
-				// 	break;
+				case game::scene_type::SPLASH:
+					current_scene.reset(new game::splash_scene(*shared_state));
+					break;
+				case game::scene_type::MAIN_MENU:
+					current_scene.reset(new game::main_menu_scene(*shared_state));
+					break;
 				case game::scene_type::SHIP:
 					current_scene.reset(new game::ship_scene(*shared_state));
 					break;

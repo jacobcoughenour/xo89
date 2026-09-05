@@ -3,7 +3,7 @@
 #include "state/mining_state.h"
 
 // assets
-#include "bn_sprite_items_dev8.h"
+#include "bn_sprite_items_creep.h"
 
 namespace game {
 
@@ -11,11 +11,11 @@ creep::creep(
 		mining_state &p_state,
 		bn::fixed_point p_spawn_position) :
 		combat_entity(p_state, 15),
-		_sprite(bn::sprite_items::dev8.create_sprite()) {
+		_sprite(bn::sprite_items::creep.create_sprite()) {
 	_sprite.set_camera(_state.get_camera());
 	_sprite.set_position(p_spawn_position);
-	_hitbox.set_width(8);
-	_hitbox.set_height(8);
+	_hitbox.set_width(12);
+	_hitbox.set_height(12);
 	_hitbox.set_position(p_spawn_position);
 }
 

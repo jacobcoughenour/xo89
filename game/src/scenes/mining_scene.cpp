@@ -47,6 +47,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		_ship_thrust_particles.push_back(particle_lifetime{
 				.sprite = s,
 				.time = 0,
+				.velocity = bn::fixed_point(0, 0),
 		});
 	}
 
