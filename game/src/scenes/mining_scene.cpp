@@ -119,7 +119,7 @@ bn::optional<scene_type> mining_scene::update() {
 		_text_sprites.clear();
 		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 		_small_text.set_bg_priority(0);
-		_small_text.generate(0, -8, "Return to ship?", _text_sprites);
+		_small_text.generate(0, -8, "RETURN TO SHIP?", _text_sprites);
 		_small_text.generate(0, 8, "[B] NO  [A] YES", _text_sprites);
 
 		if (bn::keypad::a_pressed()) {
@@ -141,25 +141,25 @@ bn::optional<scene_type> mining_scene::update() {
 		}
 
 		// overlay selector
-		if (bn::keypad::l_held()) {
-			unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
-			if (bn::keypad::up_released() && mode > 0) {
-				_state.set_drone_mode(static_cast<drone_mode>(mode - 1));
-			} else if (bn::keypad::down_released() && mode < 1) {
-				_state.set_drone_mode(static_cast<drone_mode>(mode + 1));
-			}
+		// if (bn::keypad::l_held()) {
+		// 	unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
+		// 	if (bn::keypad::up_released() && mode > 0) {
+		// 		_state.set_drone_mode(static_cast<drone_mode>(mode - 1));
+		// 	} else if (bn::keypad::down_released() && mode < 1) {
+		// 		_state.set_drone_mode(static_cast<drone_mode>(mode + 1));
+		// 	}
 
-			_text_sprites.clear();
-			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
-			_small_text.set_bg_priority(0);
-			_small_text.generate(0, -16, "MODE", _text_sprites);
-			_small_text.generate(0, 8, "MINING", _text_sprites);
-			_small_text.generate(0, 8 + 12, "COMBAT", _text_sprites);
+		// 	_text_sprites.clear();
+		// 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		// 	_small_text.set_bg_priority(0);
+		// 	_small_text.generate(0, -16, "MODE", _text_sprites);
+		// 	_small_text.generate(0, 8, "MINING", _text_sprites);
+		// 	_small_text.generate(0, 8 + 12, "COMBAT", _text_sprites);
 
-			_small_text.generate(-32, mode * 12 + 8, ">", _text_sprites);
+		// 	_small_text.generate(-32, mode * 12 + 8, ">", _text_sprites);
 
-			return result;
-		}
+		// 	return result;
+		// }
 
 		_update_space();
 		_update_overlay_text();
@@ -890,6 +890,13 @@ void mining_scene::_update_overlay_text() {
 	_text_sprites.clear();
 
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+	if (_state.get_drone_mode() == drone_mode::COMBAT) {
+		_small_text.generate(-118, -76, "COMBAT", _text_sprites);
+	} else {
+		_small_text.generate(-118, -76, "MINING", _text_sprites);
+	}
+
 	bn::string<15> text;
 	bn::ostringstream text_stream(text);
 	text_stream.append(_state.ship_health);

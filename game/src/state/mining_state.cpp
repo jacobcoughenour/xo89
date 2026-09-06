@@ -458,7 +458,7 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 }
 
 void mining_state::take_damage(unsigned int p_damage_amount) {
-	auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR);
+	auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR) + 1;
 
 	p_damage_amount = bn::max((unsigned int)1, p_damage_amount / armor);
 
