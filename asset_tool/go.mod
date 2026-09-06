@@ -1,4 +1,4 @@
-module spacegba/asset_tool
+module xo89/asset_tool
 
 go 1.25.5
 

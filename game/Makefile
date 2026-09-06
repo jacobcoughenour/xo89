@@ -31,7 +31,7 @@
 #
 # All directories are specified relative to the project directory where the makefile is found.
 #---------------------------------------------------------------------------------------------------------------------
-TARGET      	:=  spacegba
+TARGET      	:=  xo89
 BUILD       	:=  build
 LIBBUTANO   	:=  ../butano/butano
 PYTHON      	:=  python
@@ -44,7 +44,7 @@ AUDIOBACKEND	:=  maxmod
 AUDIOTOOL		:=  
 DMGAUDIO    	:=  dmg_audio
 DMGAUDIOBACKEND	:=  default
-ROMTITLE    	:=  SPACEGBA
+ROMTITLE    	:=  XO89
 ROMCODE     	:=  SBTP
 USERFLAGS   	:=  
 USERCXXFLAGS	:=  
