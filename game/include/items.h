@@ -19,15 +19,19 @@ constexpr int ITEM_TYPE_COUNT = static_cast<int>(item_type::ITEM_TYPE_MAX);
 struct item_info {
 	item_type type;
 	const char *display_name;
-	// todo icon asset
+	unsigned int sprite_index;
+	unsigned int sprite_variants;
+	unsigned int avg_unit_price;
 };
 
 constexpr item_info items[ITEM_TYPE_COUNT] = {
-	{ game::item_type::ROCK, "ROCK" },
-	{ game::item_type::IRON, "IRON" },
-	{ game::item_type::COBALT, "COBALT" },
-	{ game::item_type::GOLD, "GOLD" },
-	{ game::item_type::NICKEL, "NICKEL" },
+	// clang-format off
+	{ game::item_type::ROCK,   "ROCK",   0, 1, 1 },
+	{ game::item_type::IRON,   "IRON",   2, 0, 5 },
+	{ game::item_type::COBALT, "COBALT", 2, 0, 20 },
+	{ game::item_type::GOLD,   "GOLD",   2, 0, 10 },
+	{ game::item_type::NICKEL, "NICKEL", 2, 0, 6 },
+	// clang-format on
 };
 
 constexpr item_info get_item_info(item_type p_type) {

@@ -29,7 +29,7 @@ main_menu_scene::main_menu_scene(shared_state &p_shared) :
 		_small_var_text(common::variable_8x8_sprite_font),
 		_ship_sprite(bn::sprite_items::ship2x.create_sprite(56, 18)) {
 	bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
-	bn::music_items::title_loop.play(0.5, true);
+	bn::music_items::title_loop.play(0.6, true);
 }
 
 main_menu_scene::~main_menu_scene() {

@@ -59,7 +59,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	while (!_state.is_generated()) {
 		_text_sprites.clear();
 		text.clear();
-		text_stream.append("Generating...");
+		text_stream.append("GENERATING CHUNKS...");
 		_small_text.generate(0, -6, text, _text_sprites);
 		text.clear();
 		text_stream.append(_state.generated_chunks_count());
@@ -76,14 +76,14 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 
 	_text_sprites.clear();
 	text.clear();
-	text_stream.append("Baking Lighting...");
+	text_stream.append("BAKING LIGHTING...");
 	_small_text.generate(0, -6, text, _text_sprites);
 	bn::core::update();
 	_state.bake_lighting();
 
 	_text_sprites.clear();
 	text.clear();
-	text_stream.append("Placing Entities...");
+	text_stream.append("PLACING ENTITIES...");
 	_small_text.generate(0, -6, text, _text_sprites);
 	bn::core::update();
 	_state.place_entities();
@@ -754,7 +754,9 @@ void mining_scene::_update_pause_menu() {
 			int t = bn::max(size.x(), size.y());
 			int max_i = t * t;
 
-			int range = 16 + _shared.get_upgrade_level(upgrade_type::SCANNER) * 12;
+			auto level = _shared.get_upgrade_level(upgrade_type::SCANNER);
+			int range = 16 + level * 12;
+			bool show_ore = level == MAX_UPGRADE_LEVEL;
 
 			for (int i = 0; i < max_i; i++) {
 				if (
@@ -781,8 +783,19 @@ void mining_scene::_update_pause_menu() {
 							painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
 									bn::color(4, 31, 4));
 						} else if (_state.is_solid_tile(tile_point)) {
-							auto color = helpers::lerp_color(bn::color(10, 0, 10), bn::color(0, 0, 0), opacity);
-							auto highlight = helpers::lerp_color(bn::color(31, 8, 31), bn::color(0, 0, 0), opacity);
+							auto c = _state.get_tile_color(tile_point);
+
+							auto raw_color = bn::color(
+									bn::min(31, c.red()),
+									bn::min(31, c.green()),
+									bn::min(31, c.blue()));
+							auto raw_highlight = bn::color(
+									bn::min(31, c.red() * 3),
+									bn::min(31, c.green() * 3),
+									bn::min(31, c.blue() * 3));
+
+							auto color = helpers::lerp_color(raw_color, bn::color(0, 0, 0), opacity);
+							auto highlight = helpers::lerp_color(raw_highlight, bn::color(0, 0, 0), opacity);
 
 							bool top = _state.is_solid_tile(tile_point + bn::point(0, -1));
 							bool left = _state.is_solid_tile(tile_point + bn::point(-1, 0));

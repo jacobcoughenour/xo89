@@ -187,7 +187,8 @@ void mining_state::bake_lighting() {
 }
 
 void mining_state::place_entities() {
-	for (int chunk_y = 0; chunk_y < SPACE_SIZE; chunk_y++) {
+	// enemies don't spawn in the first two rows
+	for (int chunk_y = 2; chunk_y < SPACE_SIZE; chunk_y++) {
 		for (int chunk_x = 0; chunk_x < SPACE_SIZE; chunk_x++) {
 			if (_rng.get_int(4) != 0) {
 				continue;
@@ -210,7 +211,7 @@ void mining_state::place_entities() {
 					n.set(4, is_solid_tile(bn::point(x + 1, y)));
 					int solid = n.count();
 
-					if (solid == 0 && chunk_y > 4) {
+					if (solid == 0) {
 						creep ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
 						creeps.push_back(ent);
 
@@ -299,19 +300,24 @@ bool mining_state::can_mine_tile(bn::point p_pos) {
 	return c.material != tile_material::AIR && c.material != tile_material::BEDROCK;
 }
 
+bn::color mining_state::get_tile_color(bn::point p_pos) {
+	auto mat = get_tile(p_pos);
+	return tile_material_color[static_cast<int>(mat.material)];
+}
+
 void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
 	if (floating_items.full()) {
 		// make room
 		floating_items.pop_back();
 	}
 
-	// todo you can do better (lut?)
-	unsigned char sprite_index = static_cast<unsigned char>(p_type) + 1;
-	if (sprite_index == 1 && _rng.get_bool()) {
-		sprite_index = 0;
+	auto info = get_item_info(p_type);
+	int index = info.sprite_index;
+	if (info.sprite_variants > 0) {
+		index += _rng.get_int(info.sprite_variants);
 	}
 
-	floating_item obj(*this, p_type, sprite_index, p_position, p_velocity);
+	floating_item obj(*this, p_type, index, p_position, p_velocity);
 
 	floating_items.push_front(obj);
 }

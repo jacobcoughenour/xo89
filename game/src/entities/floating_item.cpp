@@ -14,7 +14,8 @@ floating_item::floating_item(
 		_type(p_type),
 		_sprite_index(p_sprite_index),
 		_position(p_init_pos),
-		_velocity(p_init_velocity) {}
+		_velocity(p_init_velocity) {
+}
 
 bool floating_item::update() {
 	auto ship_pos = _state.ship_hitbox.center();

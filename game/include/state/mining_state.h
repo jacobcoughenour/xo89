@@ -45,6 +45,16 @@ enum class tile_material : unsigned char {
 	TILE_MAT_MAX
 };
 
+constexpr bn::color tile_material_color[static_cast<long>(tile_material::TILE_MAT_MAX)] = {
+	bn::color(0, 0, 0),
+	bn::color(5, 0, 5),
+	bn::color(10, 0, 10),
+	bn::color(28, 28, 28),
+	bn::color(0, 0, 28),
+	bn::color(0, 28, 28),
+	bn::color(10, 28, 10),
+};
+
 enum tile_flags : unsigned short {
 	TOP = 1 << 0, //          0000 0001
 	RIGHT = 1 << 1, //        0000 0010
@@ -156,6 +166,7 @@ public:
 	bool can_mine_tile(bn::point p_pos);
 	tile_data get_tile(bn::point p_tile_point);
 	void set_tile_material(bn::point p_tile_point, tile_material p_tile_material);
+	bn::color get_tile_color(bn::point p_tile_point);
 	void mine_tile(bn::point p_tile_point);
 
 	void take_damage(unsigned int p_damage_amount);
