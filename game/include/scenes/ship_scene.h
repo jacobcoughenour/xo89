@@ -36,9 +36,9 @@ private:
 	bn::vector<bn::sprite_ptr, 180> _text_sprites;
 
 	bn::fixed _rotation = 1024 / 2;
-	ship_menu _selected_ship_menu = ship_menu::UPGRADE;
+	ship_menu _selected_ship_menu = ship_menu::BOUNTIES;
 
-	bn::optional<ship_menu> _viewing_menu = ship_menu::UPGRADE;
+	bn::optional<ship_menu> _viewing_menu;
 
 	void _update_bounties_screen();
 	void _update_inventory_screen();

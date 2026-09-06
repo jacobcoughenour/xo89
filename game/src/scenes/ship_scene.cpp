@@ -28,11 +28,11 @@ ship_scene::~ship_scene() {
 inline int _get_menu_rotation(ship_menu p_menu) {
 	switch (p_menu) {
 		case ship_menu::BOUNTIES:
-			return 240;
+			return 390;
 		case ship_menu::INVENTORY:
 			return 390;
 		case ship_menu::UPGRADE:
-			return 582;
+			return 390;
 		case ship_menu::DEPLOY:
 			return 800;
 		default:
