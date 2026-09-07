@@ -10,7 +10,8 @@ namespace game {
 creep::creep(
 		mining_state &p_state,
 		bn::fixed_point p_spawn_position) :
-		combat_entity(p_state, 15, bn::sprite_items::creep.create_sprite()) {
+		combat_entity(p_state, 15, bn::sprite_items::creep.create_sprite()),
+		_exploding_timer(0) {
 	_sprite.set_camera(_state.get_camera());
 	_sprite.set_position(p_spawn_position);
 	_hitbox.set_width(12);
@@ -20,20 +21,44 @@ creep::creep(
 
 bool creep::update() {
 	if (!combat_entity::update()) {
+		_explode();
 		return false;
 	}
 
-	auto target = _state.ship_hitbox.center();
-	auto dist = target - _hitbox.position();
-	auto dir = helpers::set_length(dist, 0.4);
-	auto desired_pos = _hitbox.position() + dir;
+	if (_exploding_timer > 0) {
+		_exploding_timer--;
 
-	if (!_state.is_solid_tile(_state.space_point_to_tile_point(desired_pos))) {
-		_hitbox.set_position(desired_pos);
-		_sprite.set_position(desired_pos);
+		_sprite.set_visible(_exploding_timer % 8 < 4);
+
+		if (_exploding_timer == 0) {
+			_explode();
+			return false;
+		}
+		return true;
+	} else {
+		auto target = _state.ship_hitbox.center();
+
+		if (helpers::box_dist_test(target, _hitbox.position(), 16)) {
+			_exploding_timer = 60;
+			return true;
+		}
+
+		auto dist = target - _hitbox.position();
+
+		auto dir = helpers::set_length(dist, 0.4);
+		auto desired_pos = _hitbox.position() + dir;
+
+		if (!_state.is_solid_tile(_state.space_point_to_tile_point(desired_pos))) {
+			_hitbox.set_position(desired_pos);
+			_sprite.set_position(desired_pos);
+		}
 	}
 
 	return true;
+}
+
+void creep::_explode() {
+	_state.explode(_hitbox.center(), 48);
 }
 
 } //namespace game

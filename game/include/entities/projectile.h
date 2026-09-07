@@ -17,6 +17,7 @@ public:
 			mining_state &p_state,
 			bool p_from_player,
 			unsigned int p_damage_amount,
+			unsigned int p_explosion_radius,
 			bn::fixed_point p_init_pos,
 			bn::fixed_point p_init_velocity);
 	bool update() override;
@@ -24,9 +25,12 @@ public:
 private:
 	bool _from_player;
 	unsigned int _damage_amount;
+	unsigned int _explosion_radius;
 	bn::fixed_point _position;
 	bn::fixed_point _velocity;
 	int _frame;
+
+	void _explode();
 
 public:
 	bn::fixed_point get_position() { return _position; }

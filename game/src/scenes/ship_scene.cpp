@@ -3,6 +3,7 @@
 #include "fonts/common_fixed_8x8_sprite_font.h"
 
 #include "bn_direct_bitmap_items_ship_interior.h"
+#include "bn_regular_bg_items_screen_bg.h"
 #include "bn_sprite_items_dev16.h"
 
 #include "helpers.h"
@@ -13,8 +14,7 @@ namespace game {
 ship_scene::ship_scene(shared_state &p_shared) :
 		scene(p_shared),
 		_camera(bn::camera_ptr::create(0, 0)),
-		_small_text(common::fixed_8x8_sprite_font),
-		_pano_bg(bn::sp_direct_bitmap_bg_ptr::create()) {
+		_small_text(common::fixed_8x8_sprite_font) {
 	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 0));
 
 	_shared.ensure_loaded();
@@ -22,19 +22,20 @@ ship_scene::ship_scene(shared_state &p_shared) :
 
 ship_scene::~ship_scene() {
 	_text_sprites.clear();
-	_pano_bg.set_visible(false);
+	_pano_bg.reset();
+	_screen_bg.reset();
 }
 
 inline int _get_menu_rotation(ship_menu p_menu) {
 	switch (p_menu) {
 		case ship_menu::BOUNTIES:
-			return 390;
+			return 100;
 		case ship_menu::INVENTORY:
-			return 390;
+			return 100;
 		case ship_menu::UPGRADE:
-			return 390;
+			return 100;
 		case ship_menu::DEPLOY:
-			return 800;
+			return 200;
 		default:
 			return 0;
 	}
@@ -62,7 +63,23 @@ inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) 
 bn::optional<scene_type> ship_scene::update() {
 	bn::optional<scene_type> result;
 
-	_pano_bg.set_visible(!_viewing_menu.has_value());
+	if (_viewing_menu.has_value()) {
+		if (_pano_bg.has_value()) {
+			_pano_bg.reset();
+			bn::core::update();
+		}
+		if (!_screen_bg.has_value()) {
+			_screen_bg = bn::regular_bg_items::screen_bg.create_bg();
+		}
+	} else {
+		if (_screen_bg.has_value()) {
+			_screen_bg.reset();
+			bn::core::update();
+		}
+		if (!_pano_bg.has_value()) {
+			_pano_bg = bn::sp_direct_bitmap_bg_ptr::create();
+		}
+	}
 
 	if (_viewing_menu.has_value()) {
 		if (_viewing_menu == ship_menu::BOUNTIES) {
@@ -93,11 +110,11 @@ bn::optional<scene_type> ship_scene::update() {
 
 		int target_rotation = _get_menu_rotation(_selected_ship_menu);
 		_rotation = helpers::lerp_fixed(_rotation, target_rotation, 0.5);
-		_rotation = helpers::fposmod(_rotation, 1024);
+		_rotation = helpers::fposmod(_rotation, 512);
 
 		_camera.set_position(_rotation, 0);
 
-		bn::sp_direct_bitmap_bg_painter painter(_pano_bg);
+		bn::sp_direct_bitmap_bg_painter painter(_pano_bg.value());
 		painter.blit(-_rotation.integer(), 0, bn::direct_bitmap_items::ship_interior);
 
 		_text_sprites.clear();

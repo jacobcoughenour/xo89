@@ -20,6 +20,11 @@ public:
 			mining_state &p_state,
 			bn::fixed_point p_spawn_position);
 	bool update() override;
+
+private:
+	unsigned int _exploding_timer;
+
+	void _explode();
 };
 
 } //namespace game

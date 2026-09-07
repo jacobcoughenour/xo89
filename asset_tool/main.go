@@ -39,7 +39,7 @@ func main() {
 	}
 
 	fmt.Println("converting interior image to bmp")
-	img, _, _, err := loadImage("ship_interior", 1024, 160, 0)
+	img, _, _, err := loadImage("ship_interior", 512, 160, 0)
 	if err != nil {
 		panic(err)
 	}

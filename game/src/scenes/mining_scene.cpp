@@ -137,7 +137,7 @@ bn::optional<scene_type> mining_scene::update() {
 		// cycle modes
 		if (bn::keypad::l_pressed()) {
 			unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
-			_state.set_drone_mode(static_cast<drone_mode>((mode + 1) % 2));
+			_state.set_drone_mode(static_cast<drone_mode>((mode + 1) % 3));
 		}
 
 		// overlay selector
@@ -936,9 +936,11 @@ void mining_scene::_update_overlay_text() {
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 	if (_state.get_drone_mode() == drone_mode::COMBAT) {
-		_small_text.generate(-118, -76, "COMBAT", _text_sprites);
+		_small_text.generate(-118, -76, "BLASTER", _text_sprites);
+	} else if (_state.get_drone_mode() == drone_mode::MINING) {
+		_small_text.generate(-118, -76, "MINING LASER", _text_sprites);
 	} else {
-		_small_text.generate(-118, -76, "MINING", _text_sprites);
+		_small_text.generate(-118, -76, "ROCKET", _text_sprites);
 	}
 
 	bn::string<15> text;

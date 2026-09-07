@@ -52,7 +52,8 @@ struct tile_data {
 
 enum class drone_mode : unsigned char {
 	MINING,
-	COMBAT
+	COMBAT,
+	ROCKET
 };
 
 class mining_state : public state {
@@ -152,6 +153,7 @@ public:
 	void mine_tile(bn::point p_tile_point);
 
 	void take_damage(unsigned int p_damage_amount);
+	void explode(bn::fixed_point p_center, bn::fixed p_distance);
 
 private:
 	bn::camera_ptr _camera;
@@ -184,7 +186,7 @@ private:
 
 public:
 	void spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity);
-	void spawn_projectile(bool p_from_player, unsigned int p_damage_amount, bn::fixed_point p_position, bn::fixed_point p_velocity);
+	void spawn_projectile(bool p_from_player, unsigned int p_damage_amount, unsigned int p_explosion_radius, bn::fixed_point p_position, bn::fixed_point p_velocity);
 
 	struct raycast_hit {
 		bn::point tile_pos;

@@ -30,6 +30,7 @@ bool turret::update() {
 		_state.spawn_projectile(
 				false,
 				5,
+				0,
 				_hitbox.center(),
 				helpers::set_length(target - _hitbox.center(), 1));
 		_fire_cooldown = 90;

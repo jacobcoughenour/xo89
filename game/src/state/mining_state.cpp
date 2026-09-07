@@ -330,13 +330,18 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 	floating_items.push_front(obj);
 }
 
-void mining_state::spawn_projectile(bool p_from_player, unsigned int p_damage_amount, bn::fixed_point p_position, bn::fixed_point p_velocity) {
+void mining_state::spawn_projectile(
+		bool p_from_player,
+		unsigned int p_damage_amount,
+		unsigned int p_explosion_radius,
+		bn::fixed_point p_position,
+		bn::fixed_point p_velocity) {
 	if (projectiles.full()) {
 		// make room
 		projectiles.pop_back();
 	}
 
-	projectile proj(*this, p_from_player, p_damage_amount, p_position, p_velocity);
+	projectile proj(*this, p_from_player, p_damage_amount, p_explosion_radius, p_position, p_velocity);
 
 	projectiles.push_front(proj);
 }
@@ -438,6 +443,59 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 		bn::fixed_point velocity(_rng.get_fixed() % 4 - 2, _rng.get_fixed() % 4 - 2);
 
 		spawn_floating_object(drop_type, position, velocity);
+	}
+}
+
+void mining_state::explode(bn::fixed_point p_center, bn::fixed p_radius) {
+	if (helpers::distance(ship_hitbox.center(), p_center) < p_radius) {
+		take_damage(8);
+	}
+
+	auto top_left = space_point_to_tile_point(bn::fixed_point(p_center.x() - p_radius, p_center.y() - p_radius));
+	auto bottom_right = space_point_to_tile_point(bn::fixed_point(p_center.x() + p_radius, p_center.y() + p_radius));
+
+	for (int y = top_left.y(); y < bottom_right.y() + 1; y++) {
+		for (int x = top_left.x(); x < bottom_right.x() + 1; x++) {
+			auto p = bn::point(x, y);
+			if (!is_solid_tile(p)) {
+				continue;
+			}
+			auto tile_center = bn::fixed_point(p.x() * TILE_SIZE_PX + TILE_SIZE_PX / 2, p.y() * TILE_SIZE_PX + TILE_SIZE_PX / 2);
+			auto ratio = helpers::distance(p_center, tile_center) / p_radius;
+			if (ratio > 1.0) {
+				continue;
+			}
+			if (ratio < 0.8 || _rng.get_bool()) {
+				mine_tile(p);
+			}
+		}
+	}
+
+	for (auto it = floating_items.begin(); it != floating_items.end(); ++it) {
+		auto &obj = *it;
+		if (!helpers::box_dist_test(p_center, obj.get_position(), p_radius * 1.5)) {
+			continue;
+		}
+		auto diff = obj.get_position() - p_center;
+		auto dist = helpers::distance(p_center, obj.get_position());
+		auto force = helpers::remap_fixed(dist, 0, p_radius * 1.5, 6.5, 0.0);
+		(*it).apply_impulse(helpers::set_length(diff, force));
+	}
+
+	for (auto it = turrets.begin(); it != turrets.end(); ++it) {
+		auto &obj = *it;
+		if (!helpers::box_dist_test(p_center, obj.get_hitbox().center(), p_radius)) {
+			continue;
+		}
+		(*it).take_damage(5);
+	}
+
+	for (auto it = creeps.begin(); it != creeps.end(); ++it) {
+		auto &obj = *it;
+		if (!helpers::box_dist_test(p_center, obj.get_hitbox().center(), p_radius)) {
+			continue;
+		}
+		(*it).take_damage(20);
 	}
 }
 
@@ -585,7 +643,7 @@ void mining_state::update() {
 			_laser_target_cell.reset();
 			_aim_direction = default_aim;
 		}
-	} else if (_drone_mode == drone_mode::COMBAT) {
+	} else if (_drone_mode == drone_mode::COMBAT || _drone_mode == drone_mode::ROCKET) {
 		_mining_timer = 0;
 		_laser_target_cell.reset();
 
@@ -630,8 +688,18 @@ void mining_state::update() {
 
 		if (bn::keypad::r_held()) {
 			if (_fire_timer == 0) {
-				spawn_projectile(true, 5, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
-				_fire_timer = _shared.get_fire_cooldown();
+				auto start = ship_center + helpers::set_length(_aim_direction, 0.5);
+				auto vel = helpers::set_length(_aim_direction, 3.5);
+
+				if (_drone_mode == drone_mode::ROCKET) {
+					spawn_projectile(true, 0, 48, start, vel);
+					_fire_timer = 120;
+				} else {
+					spawn_floating_object(item_type::ROCK, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
+
+					// spawn_projectile(true, 5, 0, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
+					_fire_timer = _shared.get_fire_cooldown();
+				}
 			}
 		}
 	}

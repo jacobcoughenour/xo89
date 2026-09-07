@@ -18,7 +18,7 @@ protected:
 	bn::sprite_ptr _sprite;
 
 public:
-	void take_damage(unsigned int p_damage_amount);
+	virtual void take_damage(unsigned int p_damage_amount);
 	bn::fixed_rect get_hitbox() { return _hitbox; }
 	bool update() override;
 	void set_visible(bool p_visible);

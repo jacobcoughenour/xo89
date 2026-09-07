@@ -7,6 +7,7 @@
 #include "bn_hbe_ptr.h"
 #include "bn_keypad.h"
 #include "bn_log.h"
+#include "bn_regular_bg_ptr.h"
 #include "bn_sp_direct_bitmap_bg_painter.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
@@ -32,10 +33,11 @@ public:
 private:
 	bn::camera_ptr _camera;
 	bn::sprite_text_generator _small_text;
-	bn::sp_direct_bitmap_bg_ptr _pano_bg;
+	bn::optional<bn::sp_direct_bitmap_bg_ptr> _pano_bg;
 	bn::vector<bn::sprite_ptr, 180> _text_sprites;
+	bn::optional<bn::regular_bg_ptr> _screen_bg;
 
-	bn::fixed _rotation = 1024 / 2;
+	bn::fixed _rotation = 512 / 2;
 	ship_menu _selected_ship_menu = ship_menu::BOUNTIES;
 
 	bn::optional<ship_menu> _viewing_menu;

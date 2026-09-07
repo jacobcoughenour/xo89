@@ -32,6 +32,9 @@ public:
 	unsigned char get_sprite_index() { return _sprite_index; }
 	bn::fixed_point get_position() { return _position; }
 	bn::fixed_point get_velocity() { return _velocity; }
+	void apply_impulse(bn::fixed_point p_impulse) {
+		_velocity += p_impulse;
+	}
 };
 
 } //namespace game
