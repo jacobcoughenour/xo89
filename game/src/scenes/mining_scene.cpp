@@ -140,7 +140,7 @@ bn::optional<scene_type> mining_scene::update() {
 		// cycle modes
 		if (bn::keypad::l_pressed()) {
 			unsigned char mode = static_cast<unsigned char>(_state.get_drone_mode());
-			_state.set_drone_mode(static_cast<drone_mode>((mode + 1) % 3));
+			_state.set_drone_mode(static_cast<drone_mode>((mode + 1) % (_shared.get_has_rocket_launcher() ? 3 : 2)));
 		}
 
 		// overlay selector

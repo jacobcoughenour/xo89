@@ -21,9 +21,10 @@ void shared_state::new_game() {
 		_saved_data.ship_inventory[i] = 0;
 	}
 	for (int i = 0; i < UPGRADE_COUNT; i++) {
-		_saved_data.upgrade_levels[i] = 3;
+		_saved_data.upgrade_levels[i] = 0;
 	}
-	_saved_data.upgrade_slots = 1000;
+	_saved_data.upgrade_slots = 0;
+	_saved_data.has_rocket_launcher = false;
 	generate_bounties();
 	_loaded = true;
 }
@@ -51,25 +52,27 @@ void shared_state::ensure_loaded() {
 
 void shared_state::generate_bounties() {
 	_bounties.clear();
-
 	_rng.set_seed(_frames);
-
-	auto count = 3 + _rng.get_int(2);
-	for (int i = 0; i < count; i++) {
-		int type = _rng.get_int(static_cast<int>(item_type::ITEM_TYPE_MAX));
-
-		unsigned int per_price = 2 + _rng.get_int(8);
-		unsigned int amount = 30 + _rng.get_int(50);
-
-		bounty b{
-			.resource = static_cast<item_type>(type),
-			// todo weights
-			.amount = amount,
-			.price = amount * per_price,
-			.collected = false
-		};
-		_bounties.push_back(b);
+	while (!_bounties.full()) {
+		_generate_bounty();
 	}
+}
+
+void shared_state::_generate_bounty() {
+	auto type = static_cast<item_type>(_rng.get_int(static_cast<int>(item_type::ITEM_TYPE_MAX)));
+
+	auto info = get_item_info(type);
+
+	unsigned int per_price = info.avg_unit_price + (_rng.get_int(3) - 1);
+	unsigned int amount = 30 + _rng.get_int(50);
+
+	bounty b{
+		.resource = static_cast<item_type>(type),
+		.amount = amount,
+		.price = amount * per_price,
+		.collected = false
+	};
+	_bounties.push_back(b);
 }
 
 unsigned int shared_state::get_inventory_count(item_type p_item_type) {
@@ -123,6 +126,24 @@ bool shared_state::collect_bounty(int p_bounty_index) {
 	return true;
 }
 
+void shared_state::clear_collected_bounties() {
+	// hack until i can figure out how to remove them properly
+	for (int i = 0; i < _bounties.max_size(); i++) {
+		for (auto it = _bounties.begin(); it != _bounties.end(); ++it) {
+			if ((*it).collected) {
+				_bounties.erase(it);
+				break;
+			}
+		}
+	}
+
+	// repopulate
+	_rng.set_seed(_frames);
+	while (!_bounties.full()) {
+		_generate_bounty();
+	}
+}
+
 void shared_state::upgrade_module(upgrade_type p_type) {
 	auto v = get_remaining_upgrade_slot_count();
 	if (v == 0) {
@@ -165,6 +186,15 @@ unsigned int shared_state::get_remaining_upgrade_slot_count() {
 	}
 
 	return total;
+}
+
+void shared_state::buy_rocket_launcher() {
+	auto bal = get_balance();
+	if (bal < ROCKET_LAUNCHER_PRICE || _saved_data.has_rocket_launcher) {
+		return;
+	}
+	_saved_data.balance -= ROCKET_LAUNCHER_PRICE;
+	_saved_data.has_rocket_launcher = true;
 }
 
 } //namespace game

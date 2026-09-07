@@ -695,9 +695,7 @@ void mining_state::update() {
 					spawn_projectile(true, 0, 48, start, vel);
 					_fire_timer = 120;
 				} else {
-					spawn_floating_object(item_type::ROCK, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
-
-					// spawn_projectile(true, 5, 0, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
+					spawn_projectile(true, 5, 0, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
 					_fire_timer = _shared.get_fire_cooldown();
 				}
 			}

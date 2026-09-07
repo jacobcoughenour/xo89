@@ -21,10 +21,10 @@ bool floating_item::update() {
 	auto ship_pos = _state.ship_hitbox.center();
 	bn::fixed len = helpers::distance(ship_pos, _position);
 
-	// if (len < 2) {
-	// 	_state.pickup_resource(_type, 1);
-	// 	return false;
-	// }
+	if (len < 2) {
+		_state.pickup_resource(_type, 1);
+		return false;
+	}
 
 	bn::fixed_point dir = helpers::normalize_point(ship_pos - _position);
 
@@ -32,7 +32,7 @@ bool floating_item::update() {
 	// attractor influence distance
 	int d = 30 + level * 20;
 	// push object towards ship
-	// _velocity += dir * bn::min(bn::fixed(10 + level * 3), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
+	_velocity += dir * bn::min(bn::fixed(10 + level * 3), bn::max(d - len, bn::fixed(0.2))) * bn::fixed(0.03);
 
 	// move by velocity
 	auto obj_desired_pos = _position + _velocity;
@@ -40,10 +40,10 @@ bool floating_item::update() {
 	auto desired_tile_point = _state.space_point_to_tile_point(obj_desired_pos);
 
 	if (_state.is_solid_tile(desired_tile_point)) {
+		// determine bounce direction
 		auto previous_tile_point = _state.space_point_to_tile_point(_position);
 		auto is_x = previous_tile_point.x() == desired_tile_point.x();
 		auto is_y = previous_tile_point.y() == desired_tile_point.y();
-		// determine bounce direction
 		if (is_x && is_y) {
 			_velocity *= bn::fixed(-1);
 		} else if (is_x) {

@@ -37,4 +37,6 @@ constexpr upgrade_info get_upgrade_info(upgrade_type p_type) {
 
 constexpr int UPGRADE_PRICE = 100;
 
+constexpr int ROCKET_LAUNCHER_PRICE = 1500;
+
 } //namespace game
