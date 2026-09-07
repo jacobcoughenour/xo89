@@ -107,14 +107,14 @@ bn::optional<scene_type> ship_scene::update() {
 		menu_index = helpers::posmod(menu_index, 4);
 		_selected_ship_menu = static_cast<ship_menu>(menu_index);
 
+		bn::sp_direct_bitmap_bg_painter painter(_pano_bg.value());
+		painter.blit(-_rotation.integer(), 0, bn::direct_bitmap_items::ship_interior);
+
 		int target_rotation = _get_menu_rotation(_selected_ship_menu);
 		_rotation = helpers::lerp_fixed(_rotation, target_rotation, 0.4);
 		_rotation = helpers::fposmod(_rotation, 512);
 
 		_camera.set_position(_rotation, 0);
-
-		bn::sp_direct_bitmap_bg_painter painter(_pano_bg.value());
-		painter.blit(-_rotation.integer(), 0, bn::direct_bitmap_items::ship_interior);
 
 		if (_selected_ship_menu != ship_menu::DEPLOY) {
 			_screen_overlay = bn::sprite_items::screen_menu_overlay.create_sprite(30, 14, _selected_ship_menu);
@@ -155,7 +155,7 @@ void ship_scene::_update_bounties_screen() {
 	if (bn::keypad::up_released()) {
 		_selected_bounty_index = bn::max(0, _selected_bounty_index - 1);
 	} else if (bn::keypad::down_released()) {
-		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size());
+		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size() - 1);
 	}
 
 	if (bn::keypad::a_released()) {
@@ -203,7 +203,7 @@ void ship_scene::_update_bounties_screen() {
 			_small_text.generate(-34, y, item.display_name, _text_sprites);
 			text.clear();
 			text_stream.append("$");
-			helpers::append_with_padding(text_stream, b.price, 3, ' ');
+			helpers::append_with_padding(text_stream, b.price, 4, ' ');
 			_small_text.generate(44, y, text, _text_sprites);
 		}
 	}

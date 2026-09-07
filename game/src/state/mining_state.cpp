@@ -26,8 +26,11 @@ mining_state::mining_state(shared_state &p_shared) :
 	BN_ASSERT(helpers::is_deg_within_range(-5, 5, 30));
 	BN_ASSERT(helpers::is_deg_within_range(-5, 150, 30) == false);
 
-	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, -1)) == bn::fixed(180));
 	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, -5)) == bn::fixed(180));
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, -1)) == bn::fixed(180));
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(-1, 0)) == bn::fixed(-90));
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(1, 0)) == bn::fixed(90));
+	BN_ASSERT(helpers::dir_to_angle_deg(bn::fixed_point(0, 1)) == bn::fixed(0));
 	BN_ASSERT(helpers::dir_to_angle_deg(helpers::angle_to_dir(90)) == 90);
 
 	_rng.set_seed(p_shared.get_frame_count());
@@ -238,7 +241,15 @@ void mining_state::place_entities() {
 						found = true;
 						break;
 					} else if (solid == 1) {
-						turret ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX));
+						unsigned char dir = 2;
+						if (n.at(4)) {
+							dir = 3;
+						} else if (n.at(3)) {
+							dir = 1;
+						} else if (n.at(2)) {
+							dir = 0;
+						}
+						turret ent(*this, bn::point(x * TILE_SIZE_PX, y * TILE_SIZE_PX), dir);
 						turrets.push_back(ent);
 
 						if (turrets.size() == MAX_TURRETS) {

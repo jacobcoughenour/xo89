@@ -81,6 +81,8 @@ public:
 		return bn::fixed_point(p.first, p.second);
 	}
 
+	// (0, 1) -> 0
+	// if x < 0 -> angle is negative
 	static inline const bn::fixed dir_to_angle_deg(bn::fixed_point p_point) {
 		return bn::degrees_atan2(p_point.x().integer(), p_point.y().integer());
 	}

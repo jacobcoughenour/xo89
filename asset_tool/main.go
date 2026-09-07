@@ -22,10 +22,14 @@ func main() {
 
 	fmt.Println("### Start Building Assets ###")
 
-	fmt.Println("creating ship spritesheet")
 	err := createShipSprites()
 	if err != nil {
 		fmt.Println("error creating ship sprites:", err)
+	}
+
+	err = createTurretSprites()
+	if err != nil {
+		fmt.Println("error creating turret sprites:", err)
 	}
 
 	err = createParticleSprites()
@@ -136,6 +140,57 @@ func createShipSprites() error {
 	return nil
 }
 
+func createTurretSprites() error {
+
+	total_frames := 34
+
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 16, Y: 16 * total_frames}})
+	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+
+	for i := range total_frames {
+
+		img, _, _, err := loadImage(fmt.Sprintf("turret_frames/%04d", i%17), 64, 64, 0)
+		if err != nil {
+			return err
+		}
+
+		angle := 0.0
+		if i > 16 {
+			angle = -90.0
+		}
+
+		rotated := transform.Rotate(img, angle, &transform.RotationOptions{})
+		scaled := transform.Resize(rotated, 16, 16, transform.NearestNeighbor)
+
+		draw.Draw(
+			canvas,
+			image.Rect(0, i*16, 32, 16+i*16),
+			scaled,
+			image.Point{0, 0},
+			draw.Over)
+	}
+
+	processed := reducedToPaletted(canvas, nil)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/turret.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func createParticleSprites() error {
 	total_frames := 16
 
@@ -165,7 +220,7 @@ func createParticleSprites() error {
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg.bmp"))
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/projectile.bmp"))
 	if err != nil {
 		return err
 	}
