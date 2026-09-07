@@ -348,6 +348,14 @@ void mining_state::spawn_projectile(
 		unsigned int p_explosion_radius,
 		bn::fixed_point p_position,
 		bn::fixed_point p_velocity) {
+	if (!p_from_player) {
+		if (_turret_sound.has_value()) {
+			_turret_sound->stop();
+			_turret_sound.reset();
+		}
+		_turret_sound = bn::sound_items::turret.play(0.5, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
+	}
+
 	if (projectiles.full()) {
 		// make room
 		projectiles.pop_back();
@@ -453,6 +461,12 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 			_break_sound->stop();
 			_break_sound.reset();
 		}
+
+		// stop the rocket sound early
+		if (_rocket_launch_sound.has_value()) {
+			_rocket_launch_sound->stop();
+			_rocket_launch_sound.reset();
+		}
 		_already_breaking_this_frame = true;
 
 		auto sample = _shared.audio_rng.get_int(3);
@@ -476,6 +490,14 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 }
 
 void mining_state::explode(bn::fixed_point p_center, bn::fixed p_radius) {
+	if (_explosion_sound.has_value()) {
+		_explosion_sound->stop();
+		_explosion_sound.reset();
+	}
+	_explosion_sound = bn::sound_items::explosion.play(0.5, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
+
+	_shake_frames = 30;
+
 	if (helpers::distance(ship_hitbox.center(), p_center) < p_radius) {
 		take_damage(8);
 	}
@@ -603,7 +625,7 @@ void mining_state::update() {
 
 	if (_is_thrusting) {
 		if (_thrust_sound_frame == 0) {
-			_thrust_sound = bn::sound_items::thrust.play(0.4);
+			_thrust_sound = bn::sound_items::thrust.play(0.25);
 		}
 		_thrust_sound_frame = (_thrust_sound_frame + 1) % 10;
 	} else {
@@ -649,7 +671,16 @@ void mining_state::update() {
 	auto ship_center = ship_hitbox.center();
 
 	// keep camera on the ship
-	_camera.set_position(ship_center);
+
+	auto focal_point = ship_center;
+	if (_shake_frames > 0) {
+		focal_point += bn::fixed_point(
+				bn::fixed(-2) + _shared.audio_rng.get_fixed(4),
+				bn::fixed(-2) + _shared.audio_rng.get_fixed(4));
+		_shake_frames--;
+	}
+
+	_camera.set_position(focal_point);
 
 	// process abilities
 
@@ -743,9 +774,21 @@ void mining_state::update() {
 				if (_drone_mode == drone_mode::ROCKET) {
 					spawn_projectile(true, 0, 48, start, vel);
 					_fire_timer = 120;
+
+					if (_rocket_launch_sound.has_value()) {
+						_rocket_launch_sound->stop();
+						_rocket_launch_sound.reset();
+					}
+					_rocket_launch_sound = bn::sound_items::rocket_launch.play(0.5);
 				} else {
 					spawn_projectile(true, 5, 0, ship_center + helpers::set_length(_aim_direction, 0.5), helpers::set_length(_aim_direction, 3.5));
 					_fire_timer = _shared.get_fire_cooldown();
+
+					if (_blaster_sound.has_value()) {
+						_blaster_sound->stop();
+						_blaster_sound.reset();
+					}
+					_blaster_sound = bn::sound_items::blaster.play(0.5, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
 				}
 			}
 		}

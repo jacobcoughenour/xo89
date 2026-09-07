@@ -158,6 +158,7 @@ public:
 
 private:
 	bn::camera_ptr _camera;
+	unsigned int _shake_frames;
 
 public:
 	inline bn::camera_ptr get_camera() { return _camera; }
@@ -223,6 +224,10 @@ private:
 	int _mining_sound_frame;
 	bn::optional<bn::sound_handle> _break_sound;
 	bool _already_breaking_this_frame;
+	bn::optional<bn::sound_handle> _rocket_launch_sound;
+	bn::optional<bn::sound_handle> _blaster_sound;
+	bn::optional<bn::sound_handle> _explosion_sound;
+	bn::optional<bn::sound_handle> _turret_sound;
 };
 
 } //namespace game
