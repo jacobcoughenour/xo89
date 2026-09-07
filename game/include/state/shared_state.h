@@ -66,6 +66,8 @@ public:
 	void load();
 	void save();
 
+	bn::seed_random audio_rng;
+
 private:
 	bool _loaded;
 	bn::seed_random _rng;

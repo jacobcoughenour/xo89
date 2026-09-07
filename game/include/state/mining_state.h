@@ -25,6 +25,7 @@
 #include "bn_regular_bg_map_ptr.h"
 #include "bn_regular_bg_ptr.h"
 #include "bn_seed_random.h"
+#include "bn_sound_handle.h"
 #include "bn_sprite_ptr.h"
 #include "bn_vector.h"
 
@@ -213,6 +214,15 @@ private:
 public:
 	bn::list<item_queue_entry, 5> item_pickup_queue;
 	int item_queue_frame() { return _item_queue_frame; }
+
+private:
+	bn::optional<bn::sound_handle> _pickup_sound;
+	bn::optional<bn::sound_handle> _thrust_sound;
+	int _thrust_sound_frame;
+	bn::optional<bn::sound_handle> _mining_sound;
+	int _mining_sound_frame;
+	bn::optional<bn::sound_handle> _break_sound;
+	bool _already_breaking_this_frame;
 };
 
 } //namespace game

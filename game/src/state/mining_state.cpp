@@ -2,6 +2,7 @@
 
 #include "bn_bitset.h"
 #include "bn_log.h"
+#include "bn_sound_items.h"
 #include "stb_perlin.h"
 
 namespace game {
@@ -447,6 +448,23 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 		drop_amount = t.base_drop_amount + (t.bonus_drop_amount > 0 ? _rng.get_int(t.bonus_drop_amount) : 0);
 	}
 
+	if (!_already_breaking_this_frame) {
+		if (_break_sound.has_value()) {
+			_break_sound->stop();
+			_break_sound.reset();
+		}
+		_already_breaking_this_frame = true;
+
+		auto sample = _shared.audio_rng.get_int(3);
+		if (sample == 0) {
+			_break_sound = bn::sound_items::break1.play(0.4, 0.8 + _shared.audio_rng.get_fixed(0.4), 0.0);
+		} else if (sample == 1) {
+			_break_sound = bn::sound_items::break2.play(0.4, 0.8 + _shared.audio_rng.get_fixed(0.4), 0.0);
+		} else if (sample == 2) {
+			_break_sound = bn::sound_items::break3.play(0.4, 0.8 + _shared.audio_rng.get_fixed(0.4), 0.0);
+		}
+	}
+
 	for (int i = 0; i < drop_amount; i++) {
 		bn::fixed_point position(
 				p_tile_point.x() * 16 + 2 + _rng.get_fixed() % 4,
@@ -542,6 +560,8 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 }
 
 void mining_state::take_damage(unsigned int p_damage_amount) {
+	bn::sound_items::damage.play();
+
 	auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR) + 1;
 
 	p_damage_amount = bn::max((unsigned int)1, p_damage_amount / armor);
@@ -580,6 +600,18 @@ void mining_state::update() {
 		ship_velocity += helpers::angle_to_dir(-ship_rotation) * bn::fixed(0.035);
 	}
 	ship_velocity *= bn::fixed(0.99);
+
+	if (_is_thrusting) {
+		if (_thrust_sound_frame == 0) {
+			_thrust_sound = bn::sound_items::thrust.play(0.4);
+		}
+		_thrust_sound_frame = (_thrust_sound_frame + 1) % 10;
+	} else {
+		if (_thrust_sound.has_value()) {
+			_thrust_sound->stop();
+			_thrust_sound.reset();
+		}
+	}
 
 	bn::fixed_point cur_pos = ship_hitbox.position();
 	bn::fixed_point desired_pos = cur_pos + ship_velocity;
@@ -646,6 +678,12 @@ void mining_state::update() {
 					mine_tile(_laser_target_cell.value());
 					_mining_timer = 0;
 				}
+
+				if (_mining_sound_frame == 0) {
+					_mining_sound = bn::sound_items::mining.play(0.8);
+				}
+				_mining_sound_frame = (_mining_sound_frame + 1) % 25;
+
 			} else {
 				_mining_timer = 0;
 			}
@@ -713,6 +751,12 @@ void mining_state::update() {
 		}
 	}
 
+	if (_mining_timer == 0 && _mining_sound.has_value()) {
+		_mining_sound->stop();
+		_mining_sound.reset();
+		_mining_sound_frame = 0;
+	}
+
 	if (_fire_timer > 0) {
 		_fire_timer--;
 	}
@@ -773,6 +817,8 @@ void mining_state::update() {
 	} else {
 		_item_queue_frame = 0;
 	}
+
+	_already_breaking_this_frame = false;
 }
 
 void mining_state::clear_inventory() {
@@ -782,6 +828,11 @@ void mining_state::clear_inventory() {
 }
 
 void mining_state::pickup_resource(item_type p_type, int p_amount) {
+	if (_pickup_sound.has_value()) {
+		_pickup_sound.value().stop();
+	}
+	_pickup_sound = bn::sound_items::pickup.play(0.6, 0.7 + _shared.audio_rng.get_fixed(0.8), 0);
+
 	item_inventory[static_cast<unsigned long>(p_type)] += p_amount;
 
 	int frame = _item_queue_frame + ITEM_QUEUE_FRAMES_TIME;

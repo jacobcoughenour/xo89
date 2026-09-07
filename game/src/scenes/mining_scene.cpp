@@ -766,6 +766,8 @@ void mining_scene::_update_pause_menu() {
 
 			bn::core::update();
 
+			bn::sound_items::scanner.play(0.8);
+
 			_scan_map_bg = bn::dp_direct_bitmap_bg_ptr::create();
 			bn::dp_direct_bitmap_bg_painter painter(_scan_map_bg.value());
 
