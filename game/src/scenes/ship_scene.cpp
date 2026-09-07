@@ -28,16 +28,10 @@ ship_scene::~ship_scene() {
 
 inline int _get_menu_rotation(ship_menu p_menu) {
 	switch (p_menu) {
-		case ship_menu::BOUNTIES:
-			return 100;
-		case ship_menu::INVENTORY:
-			return 100;
-		case ship_menu::UPGRADE:
-			return 100;
 		case ship_menu::DEPLOY:
 			return 200;
 		default:
-			return 0;
+			return 32;
 	}
 }
 
@@ -53,7 +47,7 @@ inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) 
 			stream.append("MODULES");
 			break;
 		case ship_menu::DEPLOY:
-			stream.append("DEPLOY");
+			stream.append("DEPLOY DRONE");
 			break;
 		default:
 			break;

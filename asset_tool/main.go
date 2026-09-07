@@ -35,7 +35,17 @@ func main() {
 
 	err = createMainMenuBackground()
 	if err != nil {
-		fmt.Println("error creating particle sprites:", err)
+		fmt.Println("error creating main menu background:", err)
+	}
+
+	err = createScreenBackground("screen_bg")
+	if err != nil {
+		fmt.Println("error creating screen background:", err)
+	}
+
+	err = createScreenBackground("headset_bg")
+	if err != nil {
+		fmt.Println("error creating headset background:", err)
 	}
 
 	fmt.Println("converting interior image to bmp")
@@ -195,6 +205,45 @@ func createMainMenuBackground() error {
 		return err
 	}
 	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createScreenBackground(name string) error {
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 256, Y: 256}})
+	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+
+	img, _, _, err := loadImage(name, 480, 320, 0)
+	if err != nil {
+		return err
+	}
+
+	scaled := transform.Resize(img, 240, 160, transform.NearestNeighbor)
+
+	draw.Draw(
+		canvas,
+		image.Rect(8, (256-160)/2, 256, 256),
+		scaled,
+		image.Point{0, 0},
+		draw.Over)
+
+	processed := reducedToPaletted(canvas, nil)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(cwd, fmt.Sprintf("../game/graphics/%s.bmp", name)))
 	if err != nil {
 		return err
 	}

@@ -67,6 +67,7 @@ private:
 
 	pause_menu_tab _pause_tab;
 	bn::optional<bn::sprite_ptr> _pause_ship_sprite;
+	bn::optional<bn::regular_bg_ptr> _pause_bg;
 
 	bn::sprite_text_generator _small_text;
 

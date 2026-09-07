@@ -5,6 +5,7 @@
 #include "bn_bg_palette_items_palette.h"
 #include "bn_music_items.h"
 #include "bn_regular_bg_items_green_bg.h"
+#include "bn_regular_bg_items_headset_bg.h"
 #include "bn_sound_items.h"
 #include "bn_sprite_items_breaking.h"
 #include "bn_sprite_items_crosshair.h"
@@ -54,6 +55,8 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 	bn::string<34> text;
 	bn::ostringstream text_stream(text);
+
+	_pause_bg = bn::regular_bg_items::headset_bg.create_bg();
 
 	// sit in a hard loop while we generate the level
 	while (!_state.is_generated()) {
@@ -230,6 +233,9 @@ void mining_scene::_unpause() {
 	// cleanup
 	_scan_map_bg.reset();
 	_pause_ship_sprite.reset();
+	_pause_bg.reset();
+
+	bn::core::update();
 
 	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 3));
 
@@ -745,6 +751,11 @@ void mining_scene::_update_pause_menu() {
 	}
 
 	if (_pause_tab == pause_menu_tab::SCANNER) {
+		if (_pause_bg.has_value()) {
+			_pause_bg.reset();
+			bn::core::update();
+		}
+
 		bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
 
 		if (!_scan_map_bg.has_value()) {
@@ -875,7 +886,12 @@ void mining_scene::_update_pause_menu() {
 		bn::bg_palettes::set_transparent_color(bn::color(0, 1, 3));
 
 		if (_scan_map_bg.has_value()) {
-			_scan_map_bg->set_visible(false);
+			_scan_map_bg.reset();
+			bn::core::update();
+		}
+
+		if (!_pause_bg.has_value()) {
+			_pause_bg = bn::regular_bg_items::headset_bg.create_bg();
 		}
 	}
 
