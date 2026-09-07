@@ -212,6 +212,16 @@ void mining_scene::_pause(bool p_show_radar) {
 		_ship_thrust_particles.at(i).sprite.set_visible(false);
 	}
 
+	for (auto it = _state.turrets.begin(); it != _state.turrets.end(); ++it) {
+		auto &obj = *it;
+		obj.set_visible(false);
+	}
+
+	for (auto it = _state.creeps.begin(); it != _state.creeps.end(); ++it) {
+		auto &obj = *it;
+		obj.set_visible(false);
+	}
+
 	_pause_tab = p_show_radar ? pause_menu_tab::SCANNER : pause_menu_tab::INVENTORY;
 	_cur_menu_option = menu_item_options::ABANDON_DRONE;
 }
@@ -262,6 +272,16 @@ void mining_scene::_unpause() {
 	_crosshair_sprite.set_visible(true);
 	_bg_bg->set_visible(true);
 
+	for (auto it = _state.turrets.begin(); it != _state.turrets.end(); ++it) {
+		auto &obj = *it;
+		obj.set_visible(true);
+	}
+
+	for (auto it = _state.creeps.begin(); it != _state.creeps.end(); ++it) {
+		auto &obj = *it;
+		obj.set_visible(true);
+	}
+
 	_pause_tab = pause_menu_tab::NONE;
 }
 
@@ -270,7 +290,7 @@ inline bool _has_flags(unsigned short value, unsigned short mask) {
 }
 
 void mining_scene::_set_tilemap_tile(int seed, int p_x, int p_y, int p_edge_mask, tile_material p_material, unsigned char p_light_level) {
-	const int tileset_columns = 32;
+	const int tileset_columns = 16;
 
 	const int solid_offsets[3] = { tileset_columns, tileset_columns + 1, 0 };
 
@@ -783,7 +803,18 @@ void mining_scene::_update_pause_menu() {
 							painter.rectangle(plot_point.x(), plot_point.y(), plot_point.x() + 1, plot_point.y() + 1,
 									bn::color(4, 31, 4));
 						} else if (_state.is_solid_tile(tile_point)) {
-							auto c = _state.get_tile_color(tile_point);
+							auto data = _state.get_tile(tile_point);
+
+							bn::color c;
+							if (show_ore) {
+								c = get_tile_color(data.material);
+							} else {
+								if (data.material == tile_material::BEDROCK) {
+									c = get_tile_color(tile_material::BEDROCK);
+								} else {
+									c = get_tile_color(tile_material::ROCK);
+								}
+							}
 
 							auto raw_color = bn::color(
 									bn::min(31, c.red()),

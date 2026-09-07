@@ -10,8 +10,7 @@ namespace game {
 creep::creep(
 		mining_state &p_state,
 		bn::fixed_point p_spawn_position) :
-		combat_entity(p_state, 15),
-		_sprite(bn::sprite_items::creep.create_sprite()) {
+		combat_entity(p_state, 15, bn::sprite_items::creep.create_sprite()) {
 	_sprite.set_camera(_state.get_camera());
 	_sprite.set_position(p_spawn_position);
 	_hitbox.set_width(12);

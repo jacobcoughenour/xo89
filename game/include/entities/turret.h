@@ -23,7 +23,6 @@ public:
 	bool update() override;
 
 private:
-	bn::sprite_ptr _sprite;
 	unsigned int _fire_cooldown;
 };
 

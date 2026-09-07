@@ -98,7 +98,7 @@ private:
 	bn::sprite_ptr _crosshair_sprite;
 	int _crosshair_frame;
 
-	bn::vector<bn::sprite_ptr, 16> _text_sprites;
+	bn::vector<bn::sprite_ptr, 64> _text_sprites;
 
 	bn::optional<bn::dp_direct_bitmap_bg_ptr> _scan_map_bg;
 

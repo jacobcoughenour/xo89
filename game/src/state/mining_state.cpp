@@ -35,6 +35,8 @@ mining_state::mining_state(shared_state &p_shared) :
 	clear_inventory();
 	_chunks_generated = 0;
 
+	_compute_material_table();
+
 	BN_LOG("generating with seed ", _seed);
 
 	ship_hitbox.set_width(8);
@@ -43,6 +45,14 @@ mining_state::mining_state(shared_state &p_shared) :
 }
 
 mining_state::~mining_state() {
+}
+
+void mining_state::_compute_material_table() {
+	_material_table_sum = rock_chance;
+	for (size_t i = 0; i < material_table_size; i++) {
+		_material_table_offsets[i] = _material_table_sum;
+		_material_table_sum += material_table[i].chance;
+	}
 }
 
 void mining_state::generate_next_chunk() {
@@ -64,6 +74,7 @@ void mining_state::generate_next_chunk() {
 			tile_data data{};
 
 			auto index = helpers::tile_pos_to_index(x, y, SPACE_TILE_WIDTH);
+			_rng.set_seed(_seed + index);
 
 			if (x > spawn_point.x() - spawn_area //
 					&& x < spawn_point.x() + spawn_area //
@@ -78,19 +89,24 @@ void mining_state::generate_next_chunk() {
 						SPACE_TILE_WIDTH / 8,
 						SPACE_TILE_WIDTH,
 						255);
+
+				// threshold for solid vs air
 				if (sample > bn::fixed(-0.08)) {
 					data.material = tile_material::ROCK;
-				}
-				if (sample > bn::fixed(0.2)) {
-					// dense enough to spawn an ore
 
-					_rng.set_seed(_seed + index);
-					auto d = _rng.get() % 64;
-					if (d > 42) {
-						data.material = tile_material::IRON;
-					}
-					if (d > 60) {
-						data.material = tile_material::COBALT;
+					// avoid spawning the ore on the surface by targeting higher noise sample values
+					if (sample > bn::fixed(0.2)) {
+						auto d = _rng.get() % _material_table_sum;
+
+						// do spawn table lookup to determine the material
+						for (unsigned int i = 0; i < material_table_size; i++) {
+							if (d < _material_table_offsets[i]) {
+								break;
+							}
+							if (y >= material_table[i].min_depth && y < material_table[i].max_depth) {
+								data.material = material_table[i].material;
+							}
+						}
 					}
 				}
 			}
@@ -300,11 +316,6 @@ bool mining_state::can_mine_tile(bn::point p_pos) {
 	return c.material != tile_material::AIR && c.material != tile_material::BEDROCK;
 }
 
-bn::color mining_state::get_tile_color(bn::point p_pos) {
-	auto mat = get_tile(p_pos);
-	return tile_material_color[static_cast<int>(mat.material)];
-}
-
 void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_position, bn::fixed_point p_velocity) {
 	if (floating_items.full()) {
 		// make room
@@ -312,10 +323,7 @@ void mining_state::spawn_floating_object(item_type p_type, bn::fixed_point p_pos
 	}
 
 	auto info = get_item_info(p_type);
-	int index = info.sprite_index;
-	if (info.sprite_variants > 0) {
-		index += _rng.get_int(info.sprite_variants);
-	}
+	int index = info.sprite_index + (_rng.get_bool() ? 0 : 1);
 
 	floating_item obj(*this, p_type, index, p_position, p_velocity);
 
@@ -419,7 +427,8 @@ void mining_state::mine_tile(bn::point p_tile_point) {
 	if (drop_type == item_type::ROCK) {
 		drop_amount = 1;
 	} else {
-		drop_amount = _rng.get_bool() ? 1 : 2;
+		auto t = material_table[static_cast<int>(tile.material) - static_cast<int>(tile_material::IRON)];
+		drop_amount = t.base_drop_amount + (t.bonus_drop_amount > 0 ? _rng.get_int(t.bonus_drop_amount) : 0);
 	}
 
 	for (int i = 0; i < drop_amount; i++) {

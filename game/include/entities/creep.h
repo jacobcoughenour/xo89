@@ -20,9 +20,6 @@ public:
 			mining_state &p_state,
 			bn::fixed_point p_spawn_position);
 	bool update() override;
-
-private:
-	bn::sprite_ptr _sprite;
 };
 
 } //namespace game

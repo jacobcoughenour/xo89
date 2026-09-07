@@ -10,8 +10,7 @@ namespace game {
 turret::turret(
 		mining_state &p_state,
 		bn::fixed_point p_position) :
-		combat_entity(p_state, 15),
-		_sprite(bn::sprite_items::dev16.create_sprite()),
+		combat_entity(p_state, 15, bn::sprite_items::dev16.create_sprite()),
 		_fire_cooldown(0) {
 	p_position += bn::fixed_point(8, 8);
 	_sprite.set_camera(_state.get_camera());
