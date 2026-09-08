@@ -24,6 +24,7 @@
 #include "bn_regular_bg_map_cell_info.h"
 #include "bn_regular_bg_map_ptr.h"
 #include "bn_regular_bg_ptr.h"
+#include "bn_rumble.h"
 #include "bn_seed_random.h"
 #include "bn_sound_handle.h"
 #include "bn_sprite_ptr.h"

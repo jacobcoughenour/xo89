@@ -42,6 +42,11 @@ func main() {
 		fmt.Println("error creating main menu background:", err)
 	}
 
+	err = createMainMenuShip()
+	if err != nil {
+		fmt.Println("error creating main menu ship:", err)
+	}
+
 	err = createScreenBackground("screen_bg")
 	if err != nil {
 		fmt.Println("error creating screen background:", err)
@@ -260,6 +265,45 @@ func createMainMenuBackground() error {
 		return err
 	}
 	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg.bmp"))
+	if err != nil {
+		return err
+	}
+	if err := bmp.Encode(f, processed); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createMainMenuShip() error {
+	canvas := image.NewRGBA(image.Rectangle{Max: image.Point{X: 64, Y: 32}})
+	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{color.RGBA{R: 0, G: 0, B: 0, A: 255}}, image.Point{}, draw.Over)
+
+	img, _, _, err := loadImage("main_menu_bg_ship", 1024, 1024, 0)
+	if err != nil {
+		return err
+	}
+
+	scaled := transform.Resize(img, 256, 256, transform.NearestNeighbor)
+
+	draw.Draw(
+		canvas,
+		image.Rect(-147, -136, 64, 32),
+		scaled,
+		image.Point{0, 0},
+		draw.Over)
+
+	processed := reducedToPaletted(canvas, nil)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(cwd, "../game/graphics/main_menu_bg_ship.bmp"))
 	if err != nil {
 		return err
 	}

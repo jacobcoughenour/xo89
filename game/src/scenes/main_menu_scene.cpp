@@ -14,7 +14,7 @@
 #include "fonts/common_fixed_8x8_sprite_font.h"
 #include "fonts/common_variable_8x8_sprite_font.h"
 
-#include "bn_sprite_items_ship2x.h"
+#include "bn_sprite_items_main_menu_bg_ship.h"
 
 #include "bn_music.h"
 #include "bn_music_items.h"
@@ -27,8 +27,8 @@ main_menu_scene::main_menu_scene(shared_state &p_shared) :
 		_logo_bg(bn::regular_bg_items::logo.create_bg()),
 		_small_text(common::fixed_8x8_sprite_font),
 		_small_var_text(common::variable_8x8_sprite_font),
-		_ship_sprite(bn::sprite_items::ship2x.create_sprite(56, 18)) {
-	bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+		_ship_sprite(bn::sprite_items::main_menu_bg_ship.create_sprite(56, 18)) {
+	bn::bg_palettes::set_transparent_color(bn::color(1, 0, 1));
 	bn::music_items::title_loop.play(0.6, true);
 }
 
@@ -40,11 +40,9 @@ bn::optional<scene_type> main_menu_scene::update() {
 
 	_text_sprites.clear();
 
-	_logo_bg.set_visible(!_option_selected);
-
 	_frame++;
 
-	_ship_sprite.set_tiles(bn::sprite_items::ship2x.tiles_item().create_tiles((_frame / 4) % 32));
+	_logo_bg.set_visible(!_option_selected);
 
 	if (_option_selected) {
 		if (bn::keypad::b_released()) {

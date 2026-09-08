@@ -677,7 +677,15 @@ void mining_state::update() {
 		focal_point += bn::fixed_point(
 				bn::fixed(-2) + _shared.audio_rng.get_fixed(4),
 				bn::fixed(-2) + _shared.audio_rng.get_fixed(4));
+
+		if (!bn::rumble::enabled()) {
+			bn::rumble::set_enabled(true);
+		}
 		_shake_frames--;
+	} else {
+		if (bn::rumble::enabled()) {
+			bn::rumble::set_enabled(false);
+		}
 	}
 
 	_camera.set_position(focal_point);
