@@ -16,15 +16,15 @@ bool shared_state::has_save() {
 
 void shared_state::new_game() {
 	_saved_data.format = 1;
-	_saved_data.balance = 9999;
+	_saved_data.balance = 0;
 	for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
 		_saved_data.ship_inventory[i] = 0;
 	}
 	for (int i = 0; i < UPGRADE_COUNT; i++) {
-		_saved_data.upgrade_levels[i] = MAX_UPGRADE_LEVEL;
+		_saved_data.upgrade_levels[i] = 0;
 	}
-	_saved_data.upgrade_slots = 99;
-	_saved_data.has_rocket_launcher = true;
+	_saved_data.upgrade_slots = 0;
+	_saved_data.has_rocket_launcher = false;
 	generate_bounties();
 	_loaded = true;
 }

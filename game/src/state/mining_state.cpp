@@ -678,14 +678,14 @@ void mining_state::update() {
 				bn::fixed(-2) + _shared.audio_rng.get_fixed(4),
 				bn::fixed(-2) + _shared.audio_rng.get_fixed(4));
 
-		if (!bn::rumble::enabled()) {
-			bn::rumble::set_enabled(true);
-		}
+		// if (!bn::rumble::enabled()) {
+		// 	bn::rumble::set_enabled(true);
+		// }
 		_shake_frames--;
 	} else {
-		if (bn::rumble::enabled()) {
-			bn::rumble::set_enabled(false);
-		}
+		// if (bn::rumble::enabled()) {
+		// 	bn::rumble::set_enabled(false);
+		// }
 	}
 
 	_camera.set_position(focal_point);
@@ -719,9 +719,9 @@ void mining_state::update() {
 				}
 
 				if (_mining_sound_frame == 0) {
-					_mining_sound = bn::sound_items::mining.play(0.8);
+					_mining_sound = bn::sound_items::mining.play(0.6);
 				}
-				_mining_sound_frame = (_mining_sound_frame + 1) % 25;
+				_mining_sound_frame = (_mining_sound_frame + 1) % 80;
 
 			} else {
 				_mining_timer = 0;
