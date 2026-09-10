@@ -184,27 +184,36 @@ void ship_scene::_update_bounties_screen() {
 		auto y = -32 + i * 10;
 
 		if (_selected_bounty_index == i) {
-			_small_text.generate(-90, y, ">", _text_sprites);
+			_small_text.generate(-96, y, ">", _text_sprites);
 		}
 
 		if (b.collected) {
 			_small_text.generate(-60, y, "[COLLECTED]", _text_sprites);
 		} else {
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+
 			text.clear();
-			helpers::append_with_padding(text_stream, b.amount, 3, ' ');
-			_small_text.generate(-76, y, text, _text_sprites);
+			helpers::append_with_padding(text_stream, _shared.get_inventory_count(b.resource), 3, ' ');
+			text.append("  ");
+			helpers::append_with_padding(text_stream, b.amount, 2, ' ');
+			_small_text.generate(-30, y, text, _text_sprites);
+
+			_small_text.generate(-50, y, "/", _text_sprites);
+
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 			auto item = get_item_info(b.resource);
-			auto sprite = bn::sprite_items::dropped_items.create_sprite(-40, y);
+			auto sprite = bn::sprite_items::dropped_items.create_sprite(-18, y);
 			sprite.set_tiles(bn::sprite_items::dropped_items.tiles_item()
 							.create_tiles(item.sprite_index + _shared.get_frame_count() / 30 % 2));
 			_item_sprites.push_back(sprite);
 
-			_small_text.generate(-34, y, item.display_name, _text_sprites);
+			_small_text.generate(-12, y, item.display_name, _text_sprites);
+
 			text.clear();
 			text_stream.append("$");
-			helpers::append_with_padding(text_stream, b.price, 4, ' ');
-			_small_text.generate(44, y, text, _text_sprites);
+			helpers::append_with_padding(text_stream, b.price, 3, ' ');
+			_small_text.generate(48, y, text, _text_sprites);
 		}
 	}
 }

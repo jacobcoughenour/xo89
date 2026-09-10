@@ -59,17 +59,24 @@ void shared_state::generate_bounties() {
 }
 
 void shared_state::_generate_bounty() {
-	auto type = static_cast<item_type>(_rng.get_int(static_cast<int>(item_type::ITEM_TYPE_MAX)));
+	auto type = _rng.get_int(ITEM_TYPE_COUNT);
 
-	auto info = get_item_info(type);
+	for (auto it = _bounties.begin(); it != _bounties.end(); ++it) {
+		// try to avoid duplicates
+		if (it->resource == static_cast<item_type>(type)) {
+			type = (type + 1) % ITEM_TYPE_COUNT;
+		}
+	}
 
-	unsigned int per_price = bn::max((unsigned int)1, info.avg_unit_price + (_rng.get_int(3) - 1));
-	unsigned int amount = 30 + _rng.get_int(50);
+	auto info = items[type];
+
+	bn::fixed per_price = bn::max(bn::fixed(1), bn::fixed(info.avg_unit_price) + _rng.get_fixed(3) - bn::fixed(1));
+	unsigned int amount = 10 + _rng.get_int(20);
 
 	bounty b{
 		.resource = static_cast<item_type>(type),
 		.amount = amount,
-		.price = amount * per_price,
+		.price = (unsigned int)(bn::fixed(amount) * per_price).round_integer(),
 		.collected = false
 	};
 	_bounties.push_back(b);

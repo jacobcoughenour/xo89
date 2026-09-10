@@ -21,7 +21,7 @@ struct bounty {
 	bool collected;
 };
 
-using bounty_list = bn::vector<bounty, 5>;
+using bounty_list = bn::vector<bounty, 7>;
 
 struct save_data {
 	unsigned int format = 1;

@@ -177,6 +177,8 @@ bn::optional<scene_type> mining_scene::update() {
 		_update_pause_menu();
 
 		if (bn::keypad::start_released() || bn::keypad::b_released() || bn::keypad::select_released()) {
+			_pause_item_sprites.clear();
+
 			_unpause();
 		}
 
@@ -722,6 +724,7 @@ void mining_scene::_update_pause_menu() {
 	bn::ostringstream text_stream(text);
 
 	_text_sprites.clear();
+	_pause_item_sprites.clear();
 
 	if (_pause_tab == pause_menu_tab::INVENTORY) {
 		if (!_pause_ship_sprite.has_value()) {
@@ -732,22 +735,69 @@ void mining_scene::_update_pause_menu() {
 		_pause_ship_sprite->set_tiles(bn::sprite_items::ship2x.tiles_item()
 						.create_tiles((_frame / 6) % 32));
 
-		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
-
 		for (int i = 0; i < ITEM_TYPE_COUNT; i++) {
-			auto typ = items[i];
+			auto item = items[i];
+			auto y = -20 + i * 9;
 
 			text.clear();
-			helpers::append_with_padding(text_stream, _state.item_inventory[i], 3, ' ');
-			text_stream.append(" ");
-			text_stream.append(typ.display_name);
+			helpers::append_with_padding(text_stream, _state.item_inventory[i], 0, ' ');
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+			_small_text.generate(-80, y, text, _text_sprites);
 
-			_small_text.generate(-80, -40 + i * 9, text, _text_sprites);
+			auto sprite = bn::sprite_items::dropped_items.create_sprite(-70, y);
+			sprite.set_tiles(bn::sprite_items::dropped_items.tiles_item()
+							.create_tiles(item.sprite_index + _shared.get_frame_count() / 30 % 2));
+			_pause_item_sprites.push_back(sprite);
+
+			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+			_small_text.generate(-64, y, item.display_name, _text_sprites);
 		}
 	} else {
 		if (_pause_ship_sprite.has_value()) {
 			_pause_ship_sprite.reset();
 		}
+	}
+
+	if (_pause_tab == pause_menu_tab::BOUNTIES) {
+		auto bounties = _shared.get_bounties();
+
+		for (int i = 0; i < bounties.size(); i++) {
+			auto b = bounties[i];
+
+			auto y = -32 + i * 10;
+
+			if (b.collected) {
+				_small_text.generate(-60, y, "[COLLECTED]", _text_sprites);
+			} else {
+				_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+
+				text.clear();
+				helpers::append_with_padding(text_stream, _state.item_inventory[static_cast<int>(b.resource)] + _shared.get_inventory_count(b.resource), 3, ' ');
+				text.append("  ");
+				helpers::append_with_padding(text_stream, b.amount, 2, ' ');
+				_small_text.generate(-30, y, text, _text_sprites);
+
+				_small_text.generate(-50, y, "/", _text_sprites);
+
+				_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+				auto item = get_item_info(b.resource);
+				auto sprite = bn::sprite_items::dropped_items.create_sprite(-18, y);
+				sprite.set_tiles(bn::sprite_items::dropped_items.tiles_item()
+								.create_tiles(item.sprite_index + _shared.get_frame_count() / 30 % 2));
+				_pause_item_sprites.push_back(sprite);
+
+				_small_text.generate(-12, y, item.display_name, _text_sprites);
+
+				text.clear();
+				text_stream.append("$");
+				helpers::append_with_padding(text_stream, b.price, 3, ' ');
+				_small_text.generate(48, y, text, _text_sprites);
+			}
+		}
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 70, "RETURN TO SHIP TO COLLECT", _text_sprites);
 	}
 
 	if (_pause_tab == pause_menu_tab::SCANNER) {
