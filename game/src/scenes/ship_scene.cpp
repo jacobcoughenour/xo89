@@ -4,8 +4,15 @@
 
 #include "bn_direct_bitmap_items_ship_interior.h"
 #include "bn_regular_bg_items_screen_bg.h"
+#include "bn_sprite_items_buttons.h"
+#include "bn_sprite_items_combat.h"
+#include "bn_sprite_items_dpad.h"
 #include "bn_sprite_items_dropped_items.h"
+#include "bn_sprite_items_mining.h"
+#include "bn_sprite_items_scanner.h"
+#include "bn_sprite_items_scanner_exit.h"
 #include "bn_sprite_items_screen_menu_overlay.h"
+#include "bn_sprite_items_ship_green.h"
 
 #include "helpers.h"
 #include "upgrades.h"
@@ -19,6 +26,8 @@ ship_scene::ship_scene(shared_state &p_shared) :
 	bn::bg_palettes::set_transparent_color(bn::color(0, 1, 0));
 
 	_shared.ensure_loaded();
+	_viewing_menu.reset();
+	_tutorial_page_index = 0;
 }
 
 ship_scene::~ship_scene() {
@@ -38,6 +47,9 @@ inline int _get_menu_rotation(ship_menu p_menu) {
 
 inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) {
 	switch (p_menu) {
+		case ship_menu::TUTORIAL:
+			stream.append("TUTORIAL");
+			break;
 		case ship_menu::BOUNTIES:
 			stream.append("BOUNTIES");
 			break;
@@ -81,7 +93,9 @@ bn::optional<scene_type> ship_scene::update() {
 	}
 
 	if (_viewing_menu.has_value()) {
-		if (_viewing_menu == ship_menu::BOUNTIES) {
+		if (_viewing_menu == ship_menu::TUTORIAL) {
+			_update_tutorial_screen();
+		} else if (_viewing_menu == ship_menu::BOUNTIES) {
 			_update_bounties_screen();
 		} else if (_viewing_menu == ship_menu::INVENTORY) {
 			_update_inventory_screen();
@@ -98,13 +112,13 @@ bn::optional<scene_type> ship_scene::update() {
 		}
 
 		int menu_index = static_cast<int>(_selected_ship_menu);
-		if (bn::keypad::right_released()) {
+		if (bn::keypad::right_released() || bn::keypad::r_released()) {
 			menu_index++;
 		}
-		if (bn::keypad::left_released()) {
+		if (bn::keypad::left_released() || bn::keypad::l_released()) {
 			menu_index--;
 		}
-		menu_index = helpers::posmod(menu_index, 4);
+		menu_index = helpers::posmod(menu_index, 5);
 		_selected_ship_menu = static_cast<ship_menu>(menu_index);
 
 		bn::sp_direct_bitmap_bg_painter painter(_pano_bg.value());
@@ -131,7 +145,7 @@ bn::optional<scene_type> ship_scene::update() {
 			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 			_append_ship_menu_name(text_stream, _selected_ship_menu);
 			if (_selected_ship_menu == ship_menu::DEPLOY) {
-				_small_text.generate(38, 0, text, _text_sprites);
+				_small_text.generate(45, 32, text, _text_sprites);
 			} else {
 				_small_text.generate(-40, -22, text, _text_sprites);
 			}
@@ -139,6 +153,198 @@ bn::optional<scene_type> ship_scene::update() {
 	}
 
 	return result;
+}
+
+void ship_scene::_update_tutorial_screen() {
+	if (bn::keypad::b_released()) {
+		_tutorial_sprites.clear();
+		_viewing_menu.reset();
+		return;
+	}
+
+	constexpr int tutorial_pages = 7;
+
+	if (bn::keypad::right_released() || bn::keypad::r_released()) {
+		_tutorial_page_index = bn::min(_tutorial_page_index + 1, tutorial_pages - 1);
+	}
+	if (bn::keypad::left_released() || bn::keypad::l_released()) {
+		_tutorial_page_index = bn::max(_tutorial_page_index - 1, 0);
+	}
+
+	_tutorial_sprites.clear();
+	_text_sprites.clear();
+
+	bn::string<60> text;
+	bn::ostringstream text_stream(text);
+
+	text.clear();
+	if (_tutorial_page_index > 0) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+		text.append("L<");
+		_small_text.generate(-100, -72, text, _text_sprites);
+	}
+	if (_tutorial_page_index < tutorial_pages - 1) {
+		text.clear();
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
+		text.append(">R");
+		_small_text.generate(100, -72, text, _text_sprites);
+	}
+
+	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+	text.clear();
+	for (int i = 0; i < tutorial_pages; i++) {
+		if (i == _tutorial_page_index) {
+			text.append("@");
+		} else {
+			text.append("*");
+		}
+	}
+	_small_text.generate(0, -72, text, _text_sprites);
+
+	auto frame = _shared.get_frame_count() / 10;
+
+	if (_tutorial_page_index == 0) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "MOVEMENT", _text_sprites);
+
+		auto x = -72;
+
+		auto spin_index = frame % 28;
+		auto dpad_index = 0;
+		auto a_pressed = false;
+		auto b_pressed = false;
+		auto ship_pos = 0;
+
+		if (spin_index < 7) {
+			spin_index = helpers::posmod(-4 + spin_index, 32);
+			dpad_index = 2;
+		} else if (spin_index < 14) {
+			ship_pos = spin_index - 7;
+			spin_index = 3;
+			a_pressed = true;
+		} else if (spin_index < 21) {
+			spin_index = helpers::posmod(3 - (spin_index - 14), 32);
+			dpad_index = 1;
+			ship_pos = 7;
+		} else {
+			ship_pos = 28 - spin_index;
+			spin_index = helpers::posmod(-4, 32);
+			b_pressed = true;
+		}
+
+		auto ship = bn::sprite_items::ship_green.create_sprite(x + (ship_pos * 4), -18, 7);
+		_tutorial_sprites.push_back(ship);
+
+		auto a_button = bn::sprite_items::buttons.create_sprite(x + 56 + 16, -20, a_pressed ? 1 : 0);
+		_tutorial_sprites.push_back(a_button);
+		auto b_button = bn::sprite_items::buttons.create_sprite(x + 56, -4, b_pressed ? 3 : 2);
+		_tutorial_sprites.push_back(b_button);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+		_small_text.generate(x + 72 + 16, -20, "FORWARD", _text_sprites);
+		_small_text.generate(x + 72, -4, "BACK", _text_sprites);
+		if (a_pressed) {
+			_small_text.generate(x, -8, "-->", _text_sprites);
+		} else if (b_pressed) {
+			_small_text.generate(x, -8, "<--", _text_sprites);
+		}
+
+		auto ship_spin = bn::sprite_items::ship_green.create_sprite(x + 24, 24, spin_index);
+		_tutorial_sprites.push_back(ship_spin);
+		auto dpad = bn::sprite_items::dpad.create_sprite(x + 68, 24, dpad_index);
+		_tutorial_sprites.push_back(dpad);
+		_small_text.generate(12, 24, "TURN", _text_sprites);
+
+	} else if (_tutorial_page_index == 1) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "MINING", _text_sprites);
+
+		auto x = -40;
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+		_small_text.generate(x, -30, "HOLD    TO MINE", _text_sprites);
+
+		auto r_button = bn::sprite_items::buttons.create_sprite(x + 48, -32, (frame % 12) < 3 ? 4 : 5);
+		_tutorial_sprites.push_back(r_button);
+
+		_small_text.generate(x, -10, "FLY CLOSE TO PICKUP", _text_sprites);
+		_small_text.generate(x, 0, "THE DROPPED ITEMS", _text_sprites);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+
+		_small_text.generate(0, 28, "-- CAUTION --", _text_sprites);
+		_small_text.generate(0, 40, "HARD COLLISIONS WILL", _text_sprites);
+		_small_text.generate(0, 50, "DAMAGE THE DRONE", _text_sprites);
+
+		auto mining = bn::sprite_items::mining.create_sprite(-80, -20, 0);
+		_tutorial_sprites.push_back(mining);
+
+	} else if (_tutorial_page_index == 2) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "COMBAT", _text_sprites);
+
+		auto x = -40;
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
+
+		auto l_button = bn::sprite_items::buttons.create_sprite(x + 56, -32, (frame % 12) < 6 ? 6 : 7);
+		_tutorial_sprites.push_back(l_button);
+
+		_small_text.generate(x, -30, "PRESS    TO SWITCH", _text_sprites);
+		_small_text.generate(x, -20, "TO THE BLASTER", _text_sprites);
+		_small_text.generate(x, 0, "AND FIRE WITH", _text_sprites);
+
+		auto r_button = bn::sprite_items::buttons.create_sprite(x + 120, -2, (frame % 12) < 6 ? 4 : 5);
+		_tutorial_sprites.push_back(r_button);
+
+		auto combat = bn::sprite_items::combat.create_sprite(-80, -20, 0);
+		combat.set_horizontal_flip(true);
+		_tutorial_sprites.push_back(combat);
+
+	} else if (_tutorial_page_index == 3) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "SCANNER", _text_sprites);
+
+		auto scanner = bn::sprite_items::scanner.create_sprite(0, -20);
+		_tutorial_sprites.push_back(scanner);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 30, "PRESS [SELECT] TO SCAN", _text_sprites);
+		_small_text.generate(0, 40, "YOUR SURROUNDINGS", _text_sprites);
+
+	} else if (_tutorial_page_index == 4) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "SAVE", _text_sprites);
+
+		auto scanner = bn::sprite_items::scanner_exit.create_sprite(0, -20);
+		_tutorial_sprites.push_back(scanner);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 20, "COLLECT ENOUGH RESOURCES", _text_sprites);
+		_small_text.generate(0, 30, "THEN RETURN TO THE SHIP", _text_sprites);
+		_small_text.generate(0, 40, "TO SAVE THEM", _text_sprites);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 55, "IF YOUR DRONE IS DESTROYED", _text_sprites);
+		_small_text.generate(0, 65, "YOU LOSE THOSE ITEMS", _text_sprites);
+	} else if (_tutorial_page_index == 5) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, -60, "SHIP COMPUTER", _text_sprites);
+
+		auto screens = bn::sprite_items::screen_menu_overlay.create_sprite(0, -16, (frame / 6) % 4);
+		_tutorial_sprites.push_back(screens);
+
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 20, "SELL RESOURCES ON", _text_sprites);
+		_small_text.generate(0, 30, "THE BOUNTY SCREEN", _text_sprites);
+		_small_text.generate(0, 45, "UPGRADE YOUR DRONE", _text_sprites);
+		_small_text.generate(0, 55, "ON THE MODULES SCREEN", _text_sprites);
+
+	} else if (_tutorial_page_index == 6) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 0, "GOOD LUCK", _text_sprites);
+		_small_text.generate(0, 10, ":)", _text_sprites);
+	}
 }
 
 void ship_scene::_update_bounties_screen() {

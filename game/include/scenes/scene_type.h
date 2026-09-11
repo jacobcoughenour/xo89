@@ -6,8 +6,7 @@ enum class scene_type {
 	SPLASH,
 	MAIN_MENU,
 	SHIP,
-	MINING,
-	PAYOUT
+	MINING
 };
 
 } //namespace game

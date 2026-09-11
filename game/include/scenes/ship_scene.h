@@ -20,11 +20,11 @@
 namespace game {
 
 enum ship_menu {
+	TUTORIAL,
 	BOUNTIES,
 	INVENTORY,
 	UPGRADE,
-	DEPLOY,
-	// TRAVEL,
+	DEPLOY
 };
 
 class ship_scene : public scene {
@@ -40,18 +40,21 @@ private:
 	bn::vector<bn::sprite_ptr, 180> _text_sprites;
 	bn::vector<bn::sprite_ptr, ITEM_TYPE_COUNT * 2> _item_sprites;
 	bn::optional<bn::regular_bg_ptr> _screen_bg;
+	bn::vector<bn::sprite_ptr, 8> _tutorial_sprites;
 
 	bn::optional<bn::sprite_ptr> _screen_overlay;
 
 	bn::fixed _rotation = 512 / 2;
-	ship_menu _selected_ship_menu = ship_menu::BOUNTIES;
+	ship_menu _selected_ship_menu = ship_menu::TUTORIAL;
 
 	bn::optional<ship_menu> _viewing_menu;
 
+	void _update_tutorial_screen();
 	void _update_bounties_screen();
 	void _update_inventory_screen();
 	void _update_upgrades_screen();
 
+	int _tutorial_page_index = 0;
 	int _selected_bounty_index = 0;
 	int _selected_upgrade_index = 0;
 };
