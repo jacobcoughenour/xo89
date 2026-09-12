@@ -218,7 +218,7 @@ public:
 	int item_queue_frame() { return _item_queue_frame; }
 
 private:
-	int _start_music_timer = 300;
+	int _start_music_timer = 2000;
 	bn::optional<bn::sound_handle> _pickup_sound;
 	bn::optional<bn::sound_handle> _thrust_sound;
 	int _thrust_sound_frame;

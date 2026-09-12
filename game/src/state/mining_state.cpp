@@ -356,7 +356,7 @@ void mining_state::spawn_projectile(
 			_turret_sound->stop();
 			_turret_sound.reset();
 		}
-		_turret_sound = bn::sound_items::turret.play(0.5, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
+		_turret_sound = bn::sound_items::turret.play(0.7, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
 	}
 
 	if (projectiles.full()) {
@@ -497,7 +497,7 @@ void mining_state::explode(bn::fixed_point p_center, bn::fixed p_radius) {
 		_explosion_sound->stop();
 		_explosion_sound.reset();
 	}
-	_explosion_sound = bn::sound_items::explosion.play(0.5, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
+	_explosion_sound = bn::sound_items::explosion.play(0.7, 0.9 + _shared.audio_rng.get_fixed(0.15), 0);
 
 	_shake_frames = 30;
 
@@ -605,7 +605,7 @@ void mining_state::update() {
 	if (_start_music_timer > 0) {
 		_start_music_timer--;
 		if (_start_music_timer == 0) {
-			bn::music_items::test.play(0.25, false);
+			bn::music_items::test.play(0.2, false);
 		}
 	}
 
@@ -635,7 +635,7 @@ void mining_state::update() {
 
 	if (_is_thrusting) {
 		if (_thrust_sound_frame == 0) {
-			_thrust_sound = bn::sound_items::thrust.play(0.25);
+			_thrust_sound = bn::sound_items::thrust.play(0.4);
 		}
 		_thrust_sound_frame = (_thrust_sound_frame + 1) % 10;
 	} else {

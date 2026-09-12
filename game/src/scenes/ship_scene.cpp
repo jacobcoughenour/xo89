@@ -132,7 +132,7 @@ bn::optional<scene_type> ship_scene::update() {
 		}
 		if (bn::keypad::left_released() || bn::keypad::l_released()) {
 			menu_index--;
-			if (menu_index > 0 && menu_index < static_cast<int>(ship_menu::DEPLOY) - 1) {
+			if (menu_index >= 0 && menu_index < static_cast<int>(ship_menu::DEPLOY) - 1) {
 				_shared.play_click();
 			} else {
 				_shared.play_whoosh();
@@ -376,6 +376,7 @@ void ship_scene::_update_bounties_screen() {
 		_shared.play_whoosh();
 		_selected_bounty_index = 0;
 		_shared.clear_collected_bounties();
+		_shared.save();
 		_item_sprites.clear();
 		return;
 	}
@@ -489,6 +490,7 @@ void ship_scene::_update_inventory_screen() {
 void ship_scene::_update_upgrades_screen() {
 	if (bn::keypad::b_released()) {
 		_viewing_menu.reset();
+		_shared.save();
 		_shared.play_whoosh();
 		return;
 	}

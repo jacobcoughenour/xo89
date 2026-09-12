@@ -217,7 +217,7 @@ void shared_state::play_click() {
 		_computer_click_sound->stop();
 		_computer_click_sound.reset();
 	}
-	_computer_click_sound = bn::sound_items::computer_click.play(1.0);
+	_computer_click_sound = bn::sound_items::computer_click.play(0.4);
 }
 
 void shared_state::play_load() {

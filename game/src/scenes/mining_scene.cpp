@@ -87,6 +87,8 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		}
 	}
 
+	bn::sound_items::ring.play(0.7);
+
 	_text_sprites.clear();
 	text.clear();
 	text_stream.append("RINGING...");

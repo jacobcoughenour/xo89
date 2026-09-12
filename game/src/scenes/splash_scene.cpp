@@ -125,6 +125,10 @@ bn::optional<scene_type> splash_scene::update() {
 		result = scene_type::MAIN_MENU;
 		_splash_sound.stop();
 		_jam_bg.set_visible(false);
+
+		bn::blending::set_transparency_alpha(1.0);
+		bn::blending::set_fade_alpha(0.0);
+
 		return result;
 	}
 
