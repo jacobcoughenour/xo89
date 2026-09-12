@@ -7,7 +7,9 @@
 #include "bn_hbe_ptr.h"
 #include "bn_keypad.h"
 #include "bn_log.h"
+#include "bn_music.h"
 #include "bn_regular_bg_ptr.h"
+#include "bn_sound_handle.h"
 #include "bn_sp_direct_bitmap_bg_painter.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
@@ -57,5 +59,8 @@ private:
 	int _tutorial_page_index = 0;
 	int _selected_bounty_index = 0;
 	int _selected_upgrade_index = 0;
+
+	bn::optional<bn::sound_handle> _hum_sound;
+	int _hum_timer = 0;
 };
 } //namespace game

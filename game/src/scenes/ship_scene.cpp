@@ -4,6 +4,7 @@
 
 #include "bn_direct_bitmap_items_ship_interior.h"
 #include "bn_regular_bg_items_screen_bg.h"
+#include "bn_sound_items.h"
 #include "bn_sprite_items_buttons.h"
 #include "bn_sprite_items_combat.h"
 #include "bn_sprite_items_dpad.h"
@@ -70,6 +71,14 @@ inline void _append_ship_menu_name(bn::ostringstream &stream, ship_menu p_menu) 
 bn::optional<scene_type> ship_scene::update() {
 	bn::optional<scene_type> result;
 
+	bn::music::stop();
+
+	if (_hum_timer == 0) {
+		_hum_sound = bn::sound_items::ship_hum.play(0.3);
+		_hum_timer = 34;
+	}
+	_hum_timer--;
+
 	if (_viewing_menu.has_value()) {
 		if (_pano_bg.has_value()) {
 			_pano_bg.reset();
@@ -106,17 +115,28 @@ bn::optional<scene_type> ship_scene::update() {
 		}
 		return result;
 	} else {
-		if (bn::keypad::a_released()) {
+		if (bn::keypad::a_pressed()) {
 			_viewing_menu = _selected_ship_menu;
+			_shared.play_load();
 			return result;
 		}
 
 		int menu_index = static_cast<int>(_selected_ship_menu);
 		if (bn::keypad::right_released() || bn::keypad::r_released()) {
 			menu_index++;
+			if (menu_index < static_cast<int>(ship_menu::DEPLOY)) {
+				_shared.play_click();
+			} else {
+				_shared.play_whoosh();
+			}
 		}
 		if (bn::keypad::left_released() || bn::keypad::l_released()) {
 			menu_index--;
+			if (menu_index > 0 && menu_index < static_cast<int>(ship_menu::DEPLOY) - 1) {
+				_shared.play_click();
+			} else {
+				_shared.play_whoosh();
+			}
 		}
 		menu_index = helpers::posmod(menu_index, 5);
 		_selected_ship_menu = static_cast<ship_menu>(menu_index);
@@ -159,6 +179,7 @@ void ship_scene::_update_tutorial_screen() {
 	if (bn::keypad::b_released()) {
 		_tutorial_sprites.clear();
 		_viewing_menu.reset();
+		_shared.play_whoosh();
 		return;
 	}
 
@@ -166,9 +187,11 @@ void ship_scene::_update_tutorial_screen() {
 
 	if (bn::keypad::right_released() || bn::keypad::r_released()) {
 		_tutorial_page_index = bn::min(_tutorial_page_index + 1, tutorial_pages - 1);
+		_shared.play_click();
 	}
 	if (bn::keypad::left_released() || bn::keypad::l_released()) {
 		_tutorial_page_index = bn::max(_tutorial_page_index - 1, 0);
+		_shared.play_click();
 	}
 
 	_tutorial_sprites.clear();
@@ -350,6 +373,7 @@ void ship_scene::_update_tutorial_screen() {
 void ship_scene::_update_bounties_screen() {
 	if (bn::keypad::b_released()) {
 		_viewing_menu.reset();
+		_shared.play_whoosh();
 		_selected_bounty_index = 0;
 		_shared.clear_collected_bounties();
 		_item_sprites.clear();
@@ -360,8 +384,10 @@ void ship_scene::_update_bounties_screen() {
 
 	if (bn::keypad::up_released()) {
 		_selected_bounty_index = bn::max(0, _selected_bounty_index - 1);
+		_shared.play_click();
 	} else if (bn::keypad::down_released()) {
 		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size() - 1);
+		_shared.play_click();
 	}
 
 	if (bn::keypad::a_released()) {
@@ -427,6 +453,7 @@ void ship_scene::_update_bounties_screen() {
 void ship_scene::_update_inventory_screen() {
 	if (bn::keypad::b_released()) {
 		_viewing_menu.reset();
+		_shared.play_whoosh();
 		_item_sprites.clear();
 		return;
 	}
@@ -462,6 +489,7 @@ void ship_scene::_update_inventory_screen() {
 void ship_scene::_update_upgrades_screen() {
 	if (bn::keypad::b_released()) {
 		_viewing_menu.reset();
+		_shared.play_whoosh();
 		return;
 	}
 	_text_sprites.clear();
@@ -502,8 +530,10 @@ void ship_scene::_update_upgrades_screen() {
 
 	if (bn::keypad::up_released() && _selected_upgrade_index > 0) {
 		_selected_upgrade_index--;
+		_shared.play_click();
 	} else if (bn::keypad::down_released() && _selected_upgrade_index < UPGRADE_COUNT + 1) {
 		_selected_upgrade_index++;
+		_shared.play_click();
 	}
 
 	auto selected_buy = _selected_upgrade_index == UPGRADE_COUNT;
@@ -539,13 +569,21 @@ void ship_scene::_update_upgrades_screen() {
 		_small_text.generate(-96, 30, ">", _text_sprites);
 
 		if (bn::keypad::a_released()) {
-			_shared.buy_upgrade_slot();
+			if (_shared.buy_upgrade_slot()) {
+				_shared.play_select();
+			} else {
+				_shared.play_deny();
+			}
 		}
 	} else if (selected_rocket) {
 		_small_text.generate(-96, 50, ">", _text_sprites);
 
 		if (bn::keypad::a_released()) {
-			_shared.buy_rocket_launcher();
+			if (_shared.buy_rocket_launcher()) {
+				_shared.play_select();
+			} else {
+				_shared.play_deny();
+			}
 		}
 	} else {
 		_small_text.generate(-96, -40 + _selected_upgrade_index * 10, ">", _text_sprites);
@@ -553,9 +591,17 @@ void ship_scene::_update_upgrades_screen() {
 		auto selected_upgrade = static_cast<upgrade_type>(_selected_upgrade_index);
 
 		if (bn::keypad::right_released()) {
-			_shared.upgrade_module(selected_upgrade);
+			if (_shared.upgrade_module(selected_upgrade)) {
+				_shared.play_tick(true);
+			} else {
+				_shared.play_deny();
+			}
 		} else if (bn::keypad::left_released()) {
-			_shared.downgrade_module(selected_upgrade);
+			if (_shared.downgrade_module(selected_upgrade)) {
+				_shared.play_tick(false);
+			} else {
+				_shared.play_deny();
+			}
 		}
 	}
 }

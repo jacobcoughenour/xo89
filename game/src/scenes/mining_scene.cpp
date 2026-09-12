@@ -18,6 +18,8 @@
 #include "bn_sprite_items_ship.h"
 #include "bn_sprite_items_ship2x.h"
 
+#include "bn_blending.h"
+
 namespace game {
 
 mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
@@ -58,11 +60,18 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 
 	_pause_bg = bn::regular_bg_items::headset_bg.create_bg();
 
+	_pause_bg->set_blending_enabled(true);
+
+	bn::blending::set_transparency_alpha(1.0);
+	bn::blending::set_fade_alpha(0.01);
+
+	bn::sound_items::dialing.play();
+
 	// sit in a hard loop while we generate the level
 	while (!_state.is_generated()) {
 		_text_sprites.clear();
 		text.clear();
-		text_stream.append("GENERATING CHUNKS...");
+		text_stream.append("DIALING...");
 		_small_text.generate(0, -6, text, _text_sprites);
 		text.clear();
 		text_stream.append(_state.generated_chunks_count());
@@ -71,6 +80,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		_small_text.generate(0, 6, text, _text_sprites);
 
 		bn::core::update();
+		bn::blending::set_fade_alpha(bn::min(bn::fixed(0.8), bn::blending::fade_alpha() + 0.05));
 
 		for (int i = 0; i < 32 && !_state.is_generated(); i++) {
 			_state.generate_next_chunk();
@@ -79,17 +89,27 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 
 	_text_sprites.clear();
 	text.clear();
-	text_stream.append("BAKING LIGHTING...");
+	text_stream.append("RINGING...");
 	_small_text.generate(0, -6, text, _text_sprites);
 	bn::core::update();
+
 	_state.bake_lighting();
+
+	auto handle = bn::sound_items::connection.play();
 
 	_text_sprites.clear();
 	text.clear();
-	text_stream.append("PLACING ENTITIES...");
+	text_stream.append("ESTABLISHING CONNECTION...");
 	_small_text.generate(0, -6, text, _text_sprites);
 	bn::core::update();
 	_state.place_entities();
+
+	while (handle.active()) {
+		bn::core::update();
+		bn::blending::set_fade_alpha(bn::min(bn::fixed(0.8), bn::blending::fade_alpha() + 0.01));
+	}
+
+	_pause_bg->set_blending_enabled(false);
 
 	_text_sprites.clear();
 
@@ -129,7 +149,7 @@ bn::optional<scene_type> mining_scene::update() {
 			_state.leave();
 			result = scene_type::SHIP;
 			return result;
-		} else if (bn::keypad::b_pressed()) {
+		} else if (bn::keypad::a_pressed()) {
 			_state.leave_canceled();
 		}
 
@@ -198,6 +218,8 @@ bn::optional<scene_type> mining_scene::update() {
 
 void mining_scene::_pause(bool p_show_radar) {
 	bn::bg_palettes::set_transparent_color(bn::color(0, 0, 0));
+
+	_shared.play_load();
 
 	_ship_laser.reset();
 	_bg_bg.reset();
@@ -716,8 +738,10 @@ void mining_scene::_update_pause_menu() {
 
 	if (type_index > 1 && bn::keypad::l_released()) {
 		_pause_tab = static_cast<pause_menu_tab>(type_index - 1);
+		_shared.play_click();
 	} else if (type_index < max_type && bn::keypad::r_released()) {
 		_pause_tab = static_cast<pause_menu_tab>(type_index + 1);
+		_shared.play_click();
 	}
 
 	bn::string<40> text;
@@ -1004,11 +1028,11 @@ void mining_scene::_update_overlay_text() {
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
 	if (_state.get_drone_mode() == drone_mode::COMBAT) {
-		_small_text.generate(-118, -76, "BLASTER", _text_sprites);
+		_small_text.generate(-118, -74, "BLASTER", _text_sprites);
 	} else if (_state.get_drone_mode() == drone_mode::MINING) {
-		_small_text.generate(-118, -76, "MINING LASER", _text_sprites);
+		_small_text.generate(-118, -74, "MINING LASER", _text_sprites);
 	} else {
-		_small_text.generate(-118, -76, "ROCKET", _text_sprites);
+		_small_text.generate(-118, -74, "ROCKET", _text_sprites);
 	}
 
 	bn::string<15> text;
@@ -1016,7 +1040,7 @@ void mining_scene::_update_overlay_text() {
 	text_stream.append(_state.ship_health);
 	text_stream.append("/");
 	text_stream.append("100");
-	_small_text.generate(-118, 76, text, _text_sprites);
+	_small_text.generate(-118, 75, text, _text_sprites);
 
 	_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
 
@@ -1034,7 +1058,7 @@ void mining_scene::_update_overlay_text() {
 
 		auto y = bn::clamp((mining_state::ITEM_QUEUE_FRAMES_TIME - (obj.frame - item_frame)) / 4, 0, 4);
 
-		_small_text.generate(118, 80 - index * 9 - y, text, _text_sprites);
+		_small_text.generate(118, 79 - index * 9 - y, text, _text_sprites);
 
 		index++;
 	}

@@ -23,6 +23,7 @@
 #include "bn_regular_bg_ptr.h"
 #include "bn_regular_bg_tiles_items_tiles.h"
 #include "bn_seed_random.h"
+#include "bn_sound_handle.h"
 #include "bn_sprite_ptr.h"
 #include "bn_sprite_text_generator.h"
 #include "bn_sprite_tiles_ptr.h"

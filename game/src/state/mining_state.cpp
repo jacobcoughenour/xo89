@@ -5,6 +5,8 @@
 #include "bn_sound_items.h"
 #include "stb_perlin.h"
 
+#include "bn_music_items.h"
+
 namespace game {
 
 mining_state::mining_state(shared_state &p_shared) :
@@ -285,6 +287,7 @@ void mining_state::_recalculate_lighting(bn::point p_tile_pos) {
 
 void mining_state::set_drone_mode(drone_mode p_drone_mode) {
 	_drone_mode = p_drone_mode;
+	_shared.play_tick(true);
 }
 
 bn::fixed_point mining_state::spawn_point() {
@@ -598,6 +601,13 @@ void mining_state::take_damage(unsigned int p_damage_amount) {
 
 void mining_state::update() {
 	// handle ship movement
+
+	if (_start_music_timer > 0) {
+		_start_music_timer--;
+		if (_start_music_timer == 0) {
+			bn::music_items::test.play(0.25, false);
+		}
+	}
 
 	if (ship_hitbox.position().y() < -80) {
 		show_leave_confirmation = true;

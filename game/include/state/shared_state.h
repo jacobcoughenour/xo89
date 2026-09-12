@@ -8,6 +8,7 @@
 #include "bn_list.h"
 #include "bn_log.h"
 #include "bn_seed_random.h"
+#include "bn_sound_handle.h"
 #include "bn_sram.h"
 #include "bn_vector.h"
 
@@ -49,14 +50,14 @@ public:
 	bool collect_bounty(int p_bounty_index);
 	void clear_collected_bounties();
 
-	void upgrade_module(upgrade_type p_type);
-	void downgrade_module(upgrade_type p_type);
+	bool upgrade_module(upgrade_type p_type);
+	bool downgrade_module(upgrade_type p_type);
 	unsigned int get_upgrade_level(upgrade_type p_type) { return bn::min((unsigned int)MAX_UPGRADE_LEVEL, _saved_data.upgrade_levels[static_cast<int>(p_type)]); }
-	void buy_upgrade_slot();
+	bool buy_upgrade_slot();
 	unsigned int get_total_upgrade_slot_count() { return _saved_data.upgrade_slots; }
 	unsigned int get_remaining_upgrade_slot_count();
 
-	void buy_rocket_launcher();
+	bool buy_rocket_launcher();
 	bool get_has_rocket_launcher() { return _saved_data.has_rocket_launcher; }
 
 	int get_mining_duration() { return 90 - (get_upgrade_level(upgrade_type::MINING_SPEED) * 25); }
@@ -67,6 +68,19 @@ public:
 	void save();
 
 	bn::seed_random audio_rng;
+
+	bn::optional<bn::sound_handle> _computer_load_sound;
+	bn::optional<bn::sound_handle> _computer_click_sound;
+	bn::optional<bn::sound_handle> _tick_sound;
+	bn::optional<bn::sound_handle> _whoosh_sound;
+	bn::optional<bn::sound_handle> _deny_sound;
+	bn::optional<bn::sound_handle> _select_sound;
+	void play_click();
+	void play_load();
+	void play_tick(bool p_up);
+	void play_whoosh();
+	void play_deny();
+	void play_select();
 
 private:
 	bool _loaded;

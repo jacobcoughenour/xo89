@@ -1,5 +1,7 @@
 #include "state/shared_state.h"
 
+#include "bn_sound_items.h"
+
 namespace game {
 
 shared_state::shared_state() {
@@ -151,34 +153,39 @@ void shared_state::clear_collected_bounties() {
 	}
 }
 
-void shared_state::upgrade_module(upgrade_type p_type) {
+bool shared_state::upgrade_module(upgrade_type p_type) {
 	auto v = get_remaining_upgrade_slot_count();
 	if (v == 0) {
-		return;
+		return false;
 	}
 	auto &c = _saved_data.upgrade_levels[static_cast<int>(p_type)];
 	if (c < MAX_UPGRADE_LEVEL) {
 		c++;
+		return true;
 	}
+	return false;
 }
 
-void shared_state::downgrade_module(upgrade_type p_type) {
+bool shared_state::downgrade_module(upgrade_type p_type) {
 	auto &c = _saved_data.upgrade_levels[static_cast<int>(p_type)];
 	if (c != 0) {
 		c--;
+		return true;
 	}
+	return false;
 }
 
-void shared_state::buy_upgrade_slot() {
+bool shared_state::buy_upgrade_slot() {
 	auto bal = get_balance();
 	if (bal < UPGRADE_PRICE) {
-		return;
+		return false;
 	}
 	if (_saved_data.upgrade_slots >= (MAX_UPGRADE_LEVEL * UPGRADE_COUNT)) {
-		return;
+		return false;
 	}
 	_saved_data.balance -= UPGRADE_PRICE;
 	_saved_data.upgrade_slots++;
+	return true;
 }
 
 unsigned int shared_state::get_remaining_upgrade_slot_count() {
@@ -195,13 +202,62 @@ unsigned int shared_state::get_remaining_upgrade_slot_count() {
 	return total;
 }
 
-void shared_state::buy_rocket_launcher() {
+bool shared_state::buy_rocket_launcher() {
 	auto bal = get_balance();
 	if (bal < ROCKET_LAUNCHER_PRICE || _saved_data.has_rocket_launcher) {
-		return;
+		return false;
 	}
 	_saved_data.balance -= ROCKET_LAUNCHER_PRICE;
 	_saved_data.has_rocket_launcher = true;
+	return true;
+}
+
+void shared_state::play_click() {
+	if (_computer_click_sound.has_value()) {
+		_computer_click_sound->stop();
+		_computer_click_sound.reset();
+	}
+	_computer_click_sound = bn::sound_items::computer_click.play(1.0);
+}
+
+void shared_state::play_load() {
+	if (_computer_load_sound.has_value()) {
+		_computer_load_sound->stop();
+		_computer_load_sound.reset();
+	}
+	_computer_load_sound = bn::sound_items::computer_load.play(1.0);
+}
+
+void shared_state::play_tick(bool p_up) {
+	if (_tick_sound.has_value()) {
+		_tick_sound->stop();
+		_tick_sound.reset();
+	}
+	_tick_sound = bn::sound_items::tick.play(0.8, p_up ? bn::fixed(1.0) : bn::fixed(0.8), 0.0);
+}
+
+void shared_state::play_whoosh() {
+	if (_whoosh_sound.has_value()) {
+		_whoosh_sound->stop();
+		_whoosh_sound.reset();
+	}
+	_whoosh_sound = bn::sound_items::whoosh.play(0.9);
+}
+
+void shared_state::play_deny() {
+	if (_deny_sound.has_value()) {
+		_deny_sound->stop();
+		_deny_sound.reset();
+	}
+	_deny_sound = bn::sound_items::deny.play(0.8);
+}
+
+void shared_state::play_select() {
+	if (_select_sound.has_value()) {
+		_select_sound->stop();
+		_select_sound.reset();
+	}
+	_select_sound = bn::sound_items::select.play(0.8);
 }
 
 } //namespace game
