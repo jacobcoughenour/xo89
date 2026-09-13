@@ -122,17 +122,19 @@ bn::optional<scene_type> main_menu_scene::update() {
 			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 			_small_var_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
 
-			_small_text.generate(0, -32, "CREDITS", _text_sprites);
+			_small_text.generate(0, -48, "CREDITS", _text_sprites);
 
 			constexpr bn::string_view credits_text_lines[] = {
-				"3D assets by PIZZA DOGGY",
-				"Everything else by Jacob Coughenour,",
-				"Nostabyte Interactive, 12th Sep 2026.",
 				"Made with Butano Engine v21.7.1",
+				"3D assets by PIZZA DOGGY",
+				"Sounds from freesound.org",
+				"Perlin noise code by Sean Barrett",
+				"Everything else by Jacob Coughenour,",
+				"Nostabyte Interactive, 13th Sep 2026.",
 			};
 
-			for (int i = 0; i < 4; i++) {
-				_small_var_text.generate(0, i * 10, credits_text_lines[i], _text_sprites);
+			for (int i = 0; i < 6; i++) {
+				_small_var_text.generate(0, -10 + i * 10, credits_text_lines[i], _text_sprites);
 			}
 		}
 

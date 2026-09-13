@@ -43,16 +43,18 @@ constexpr bn::color get_tile_color(tile_material p_mat) {
 
 constexpr int ITEM_TYPE_COUNT = static_cast<int>(item_type::ITEM_TYPE_MAX);
 
+constexpr int MAX_BOUNTIES = 4;
+
 struct item_info {
 	item_type type;
 	const char *display_name;
 	unsigned int sprite_index;
-	unsigned int avg_unit_price;
+	bn::fixed avg_unit_price;
 };
 
 constexpr item_info items[ITEM_TYPE_COUNT] = {
 	// clang-format off
-	{ game::item_type::ROCK,   "ROCK",   0,  1 },
+	{ game::item_type::ROCK,   "ROCK",   0,  0.2 },
 	{ game::item_type::IRON,   "IRON",   2,  5 },
 	{ game::item_type::COBALT, "COBALT", 4, 20 },
 	{ game::item_type::GOLD,   "GOLD",   6, 10 },
@@ -77,10 +79,10 @@ constexpr unsigned int rock_chance = 60;
 constexpr unsigned int material_table_size = static_cast<int>(tile_material::TILE_MAT_MAX) - static_cast<int>(tile_material::IRON);
 constexpr material_values material_table[material_table_size] = {
 	// clang-format off
-	{  game::tile_material::IRON,    0, 128, 2, 3, 10 },
-	{  game::tile_material::COBALT, 64,  80, 1, 4,  3 },
-	{  game::tile_material::GOLD,   90, 128, 1, 0,  3 },
-	{  game::tile_material::NICKEL,  0, 128, 2, 3, 10 },
+	{  game::tile_material::IRON,    0, 128, 2, 1, 9 },
+	{  game::tile_material::COBALT, 64,  80, 1, 2, 3 },
+	{  game::tile_material::GOLD,   90, 128, 1, 0, 3 },
+	{  game::tile_material::NICKEL,  0, 128, 2, 1, 9 },
 	// clang-format on
 };
 

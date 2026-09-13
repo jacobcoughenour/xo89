@@ -154,6 +154,7 @@ public:
 	void set_tile_material(bn::point p_tile_point, tile_material p_tile_material);
 	void mine_tile(bn::point p_tile_point);
 
+	void play_damage_sound();
 	void take_damage(unsigned int p_damage_amount);
 	void explode(bn::fixed_point p_center, bn::fixed p_distance);
 
@@ -212,14 +213,18 @@ public:
 
 private:
 	int _item_queue_frame;
+	int _bounty_completed_timer;
 
 public:
 	bn::list<item_queue_entry, 5> item_pickup_queue;
 	int item_queue_frame() { return _item_queue_frame; }
+	int bounty_completed_timer() { return _bounty_completed_timer; }
 
 private:
 	int _start_music_timer = 2000;
+	bn::optional<bn::sound_handle> _damage_sound;
 	bn::optional<bn::sound_handle> _pickup_sound;
+	bn::optional<bn::sound_handle> _bounty_sound;
 	bn::optional<bn::sound_handle> _thrust_sound;
 	int _thrust_sound_frame;
 	bn::optional<bn::sound_handle> _mining_sound;

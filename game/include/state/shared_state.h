@@ -22,7 +22,7 @@ struct bounty {
 	bool collected;
 };
 
-using bounty_list = bn::vector<bounty, 7>;
+using bounty_list = bn::vector<bounty, MAX_BOUNTIES>;
 
 struct save_data {
 	unsigned int format = 1;
@@ -47,6 +47,7 @@ public:
 	void deposit_to_inventory(item_type p_item_type, unsigned int p_amount);
 	int get_balance();
 	const bounty_list &get_bounties();
+	bool can_collect_bounty(int p_bounty_index, int p_additional);
 	bool collect_bounty(int p_bounty_index);
 	void clear_collected_bounties();
 
@@ -60,7 +61,7 @@ public:
 	bool buy_rocket_launcher();
 	bool get_has_rocket_launcher() { return _saved_data.has_rocket_launcher; }
 
-	int get_mining_duration() { return 90 - (get_upgrade_level(upgrade_type::MINING_SPEED) * 25); }
+	int get_mining_duration() { return 90 - (get_upgrade_level(upgrade_type::MINING_SPEED) * 20); }
 	int get_fire_cooldown() { return 25 - (get_upgrade_level(upgrade_type::FIRE_RATE) * 5); }
 
 	bool has_save();

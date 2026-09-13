@@ -14,6 +14,7 @@ combat_entity::combat_entity(
 }
 
 void combat_entity::take_damage(unsigned int p_damage_amount) {
+	_state.play_damage_sound();
 	if (p_damage_amount >= _health) {
 		_health = 0;
 	} else {

@@ -72,7 +72,7 @@ private:
 	pause_menu_tab _pause_tab;
 	bn::optional<bn::sprite_ptr> _pause_ship_sprite;
 	bn::optional<bn::regular_bg_ptr> _pause_bg;
-	bn::vector<bn::sprite_ptr, ITEM_TYPE_COUNT * 2> _pause_item_sprites;
+	bn::vector<bn::sprite_ptr, MAX_BOUNTIES * 2> _pause_item_sprites;
 
 	bn::sprite_text_generator _small_text;
 
@@ -104,7 +104,7 @@ private:
 	bn::sprite_ptr _crosshair_sprite;
 	int _crosshair_frame;
 
-	bn::vector<bn::sprite_ptr, 64> _text_sprites;
+	bn::vector<bn::sprite_ptr, 80> _text_sprites;
 
 	bn::optional<bn::dp_direct_bitmap_bg_ptr> _scan_map_bg;
 

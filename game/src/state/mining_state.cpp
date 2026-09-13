@@ -584,8 +584,16 @@ tile_data mining_state::get_tile_at(int p_tile_x, int p_tile_y) {
 	return _unpack_tile_data(_tile_cells[index]);
 }
 
+void mining_state::play_damage_sound() {
+	if (_damage_sound.has_value()) {
+		_damage_sound->stop();
+		_damage_sound.reset();
+	}
+	_damage_sound = bn::sound_items::damage.play();
+}
+
 void mining_state::take_damage(unsigned int p_damage_amount) {
-	bn::sound_items::damage.play();
+	play_damage_sound();
 
 	auto armor = _shared.get_upgrade_level(upgrade_type::ARMOR) + 1;
 
@@ -729,9 +737,9 @@ void mining_state::update() {
 				}
 
 				if (_mining_sound_frame == 0) {
-					_mining_sound = bn::sound_items::mining.play(0.6);
+					_mining_sound = bn::sound_items::mining.play(0.45);
 				}
-				_mining_sound_frame = (_mining_sound_frame + 1) % 80;
+				_mining_sound_frame = (_mining_sound_frame + 1) % 54;
 
 			} else {
 				_mining_timer = 0;
@@ -880,6 +888,10 @@ void mining_state::update() {
 	}
 
 	_already_breaking_this_frame = false;
+
+	if (_bounty_completed_timer > 0) {
+		_bounty_completed_timer--;
+	}
 }
 
 void mining_state::clear_inventory() {
@@ -894,7 +906,30 @@ void mining_state::pickup_resource(item_type p_type, int p_amount) {
 	}
 	_pickup_sound = bn::sound_items::pickup.play(0.6, 0.7 + _shared.audio_rng.get_fixed(0.8), 0);
 
-	item_inventory[static_cast<unsigned long>(p_type)] += p_amount;
+	auto current_amount = item_inventory[static_cast<unsigned long>(p_type)];
+
+	bool bounty_was_completed = false;
+	auto bounties = _shared.get_bounties();
+	for (int i = 0; i < bounties.size(); i++) {
+		auto b = bounties[i];
+		if (b.resource != p_type) {
+			continue;
+		}
+		if (_shared.can_collect_bounty(i, current_amount) !=
+				_shared.can_collect_bounty(i, current_amount + p_amount)) {
+			bounty_was_completed = true;
+			break;
+		}
+	}
+	if (bounty_was_completed) {
+		_bounty_completed_timer = 90;
+		if (_bounty_sound.has_value()) {
+			_bounty_sound.value().stop();
+		}
+		_bounty_sound = bn::sound_items::bounty.play(0.8);
+	}
+
+	item_inventory[static_cast<unsigned long>(p_type)] = current_amount + p_amount;
 
 	int frame = _item_queue_frame + ITEM_QUEUE_FRAMES_TIME;
 

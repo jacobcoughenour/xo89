@@ -14,6 +14,7 @@
 #include "bn_sprite_items_scanner_exit.h"
 #include "bn_sprite_items_screen_menu_overlay.h"
 #include "bn_sprite_items_ship_green.h"
+#include "bn_sprite_items_yesno.h"
 
 #include "helpers.h"
 #include "upgrades.h"
@@ -117,7 +118,9 @@ bn::optional<scene_type> ship_scene::update() {
 	} else {
 		if (bn::keypad::a_pressed()) {
 			_viewing_menu = _selected_ship_menu;
-			_shared.play_load();
+			if (_viewing_menu != ship_menu::DEPLOY) {
+				_shared.play_load();
+			}
 			return result;
 		}
 
@@ -383,16 +386,37 @@ void ship_scene::_update_bounties_screen() {
 
 	auto bounties = _shared.get_bounties();
 
+	bool needs_refresh = false;
+	for (int i = 0; i < bounties.size(); i++) {
+		auto b = bounties[i];
+		if (b.collected) {
+			needs_refresh = true;
+			break;
+		}
+	}
+
 	if (bn::keypad::up_released()) {
 		_selected_bounty_index = bn::max(0, _selected_bounty_index - 1);
 		_shared.play_click();
 	} else if (bn::keypad::down_released()) {
-		_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size() - 1);
+		if (needs_refresh) {
+			_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size());
+		} else {
+			_selected_bounty_index = bn::min(_selected_bounty_index + 1, bounties.size() - 1);
+		}
 		_shared.play_click();
 	}
 
-	if (bn::keypad::a_released()) {
-		_shared.collect_bounty(_selected_bounty_index);
+	if (bn::keypad::a_pressed()) {
+		if (_selected_bounty_index == bounties.size()) {
+			_shared.play_select();
+			_shared.clear_collected_bounties();
+			_selected_bounty_index = 0;
+		} else if (_shared.collect_bounty(_selected_bounty_index)) {
+			_shared.play_select();
+		} else {
+			_shared.play_deny();
+		}
 	}
 
 	_item_sprites.clear();
@@ -414,40 +438,50 @@ void ship_scene::_update_bounties_screen() {
 	for (int i = 0; i < bounties.size(); i++) {
 		auto b = bounties[i];
 
-		auto y = -32 + i * 10;
+		auto y = -32 + i * 11;
 
 		if (_selected_bounty_index == i) {
-			_small_text.generate(-96, y, ">", _text_sprites);
+			_small_text.generate(-98, y, ">", _text_sprites);
 		}
 
 		if (b.collected) {
 			_small_text.generate(-60, y, "[COLLECTED]", _text_sprites);
 		} else {
 			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
-
 			text.clear();
 			helpers::append_with_padding(text_stream, _shared.get_inventory_count(b.resource), 3, ' ');
-			text.append("  ");
+			text.append("/");
 			helpers::append_with_padding(text_stream, b.amount, 2, ' ');
 			_small_text.generate(-30, y, text, _text_sprites);
 
-			_small_text.generate(-50, y, "/", _text_sprites);
-
 			_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
+			auto yesnosprite = bn::sprite_items::yesno.create_sprite(-22, y);
+			yesnosprite.set_tiles(bn::sprite_items::yesno.tiles_item()
+							.create_tiles(_shared.can_collect_bounty(i, 0) ? 0 : 1));
+			_item_sprites.push_back(yesnosprite);
+
 			auto item = get_item_info(b.resource);
-			auto sprite = bn::sprite_items::dropped_items.create_sprite(-18, y);
+			auto sprite = bn::sprite_items::dropped_items.create_sprite(-8, y);
 			sprite.set_tiles(bn::sprite_items::dropped_items.tiles_item()
 							.create_tiles(item.sprite_index + _shared.get_frame_count() / 30 % 2));
 			_item_sprites.push_back(sprite);
 
-			_small_text.generate(-12, y, item.display_name, _text_sprites);
+			_small_text.generate(-2, y, item.display_name, _text_sprites);
 
 			text.clear();
 			text_stream.append("$");
 			helpers::append_with_padding(text_stream, b.price, 3, ' ');
-			_small_text.generate(48, y, text, _text_sprites);
+			_small_text.generate(54, y, text, _text_sprites);
 		}
+	}
+
+	if (needs_refresh) {
+		if (_selected_bounty_index == bounties.size()) {
+			_small_text.generate(-98, 64, ">", _text_sprites);
+		}
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+		_small_text.generate(0, 64, "REFRESH LIST", _text_sprites);
 	}
 }
 
@@ -570,7 +604,7 @@ void ship_scene::_update_upgrades_screen() {
 	if (selected_buy) {
 		_small_text.generate(-96, 30, ">", _text_sprites);
 
-		if (bn::keypad::a_released()) {
+		if (bn::keypad::a_pressed()) {
 			if (_shared.buy_upgrade_slot()) {
 				_shared.play_select();
 			} else {
@@ -580,7 +614,7 @@ void ship_scene::_update_upgrades_screen() {
 	} else if (selected_rocket) {
 		_small_text.generate(-96, 50, ">", _text_sprites);
 
-		if (bn::keypad::a_released()) {
+		if (bn::keypad::a_pressed()) {
 			if (_shared.buy_rocket_launcher()) {
 				_shared.play_select();
 			} else {

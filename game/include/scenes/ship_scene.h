@@ -40,7 +40,7 @@ private:
 	bn::sprite_text_generator _small_text;
 	bn::optional<bn::sp_direct_bitmap_bg_ptr> _pano_bg;
 	bn::vector<bn::sprite_ptr, 180> _text_sprites;
-	bn::vector<bn::sprite_ptr, ITEM_TYPE_COUNT * 2> _item_sprites;
+	bn::vector<bn::sprite_ptr, MAX_BOUNTIES * 2> _item_sprites;
 	bn::optional<bn::regular_bg_ptr> _screen_bg;
 	bn::vector<bn::sprite_ptr, 8> _tutorial_sprites;
 

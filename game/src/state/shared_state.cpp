@@ -72,13 +72,17 @@ void shared_state::_generate_bounty() {
 
 	auto info = items[type];
 
-	bn::fixed per_price = bn::max(bn::fixed(1), bn::fixed(info.avg_unit_price) + _rng.get_fixed(3) - bn::fixed(1));
-	unsigned int amount = 10 + _rng.get_int(20);
+	bn::fixed per_price = info.avg_unit_price < bn::fixed(1)
+			? info.avg_unit_price
+			: info.avg_unit_price + _rng.get_fixed(3) - bn::fixed(1);
+	unsigned int amount = info.avg_unit_price < bn::fixed(1)
+			? 18 + _rng.get_int(24)
+			: 12 + _rng.get_int(12);
 
 	bounty b{
 		.resource = static_cast<item_type>(type),
 		.amount = amount,
-		.price = (unsigned int)(bn::fixed(amount) * per_price).round_integer(),
+		.price = (unsigned int)bn::max(bn::fixed(1), bn::fixed(amount) * per_price).round_integer(),
 		.collected = false
 	};
 	_bounties.push_back(b);
@@ -108,7 +112,7 @@ const bounty_list &shared_state::get_bounties() {
 	return _bounties;
 }
 
-bool shared_state::collect_bounty(int p_bounty_index) {
+bool shared_state::can_collect_bounty(int p_bounty_index, int p_additional) {
 	if (p_bounty_index >= _bounties.size()) {
 		return false;
 	}
@@ -120,11 +124,15 @@ bool shared_state::collect_bounty(int p_bounty_index) {
 	}
 
 	auto count = get_inventory_count(selected.resource);
-	if (count < selected.amount) {
-		// insufficient amount in inventory
+	return (count + p_additional) >= selected.amount;
+}
+
+bool shared_state::collect_bounty(int p_bounty_index) {
+	if (!can_collect_bounty(p_bounty_index, 0)) {
 		return false;
 	}
 
+	auto &selected = _bounties[p_bounty_index];
 	selected.collected = true;
 
 	_withdraw_from_inventory(selected.resource, selected.amount);

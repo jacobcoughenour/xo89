@@ -17,6 +17,7 @@
 #include "bn_sprite_items_projectile.h"
 #include "bn_sprite_items_ship.h"
 #include "bn_sprite_items_ship2x.h"
+#include "bn_sprite_items_yesno.h"
 
 #include "bn_blending.h"
 
@@ -65,7 +66,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 	bn::blending::set_transparency_alpha(1.0);
 	bn::blending::set_fade_alpha(0.01);
 
-	bn::sound_items::dialing.play();
+	bn::sound_items::dialing.play(0.8);
 
 	// sit in a hard loop while we generate the level
 	while (!_state.is_generated()) {
@@ -87,7 +88,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 		}
 	}
 
-	bn::sound_items::ring.play(0.7);
+	bn::sound_items::ring.play(0.8);
 
 	_text_sprites.clear();
 	text.clear();
@@ -97,7 +98,7 @@ mining_scene::mining_scene(shared_state &p_shared, mining_state &p_state) :
 
 	_state.bake_lighting();
 
-	auto handle = bn::sound_items::connection.play();
+	auto handle = bn::sound_items::connection.play(0.65);
 
 	_text_sprites.clear();
 	text.clear();
@@ -790,35 +791,38 @@ void mining_scene::_update_pause_menu() {
 		for (int i = 0; i < bounties.size(); i++) {
 			auto b = bounties[i];
 
-			auto y = -32 + i * 10;
+			auto y = -32 + i * 11;
 
 			if (b.collected) {
 				_small_text.generate(-60, y, "[COLLECTED]", _text_sprites);
 			} else {
 				_small_text.set_alignment(bn::sprite_text_generator::alignment_type::RIGHT);
-
 				text.clear();
-				helpers::append_with_padding(text_stream, _state.item_inventory[static_cast<int>(b.resource)] + _shared.get_inventory_count(b.resource), 3, ' ');
-				text.append("  ");
+
+				auto drone_count = _state.item_inventory[static_cast<int>(b.resource)];
+
+				helpers::append_with_padding(text_stream, drone_count + _shared.get_inventory_count(b.resource), 3, ' ');
+				text.append("/");
 				helpers::append_with_padding(text_stream, b.amount, 2, ' ');
 				_small_text.generate(-30, y, text, _text_sprites);
 
-				_small_text.generate(-50, y, "/", _text_sprites);
-
 				_small_text.set_alignment(bn::sprite_text_generator::alignment_type::LEFT);
 
+				auto yesnosprite = bn::sprite_items::yesno.create_sprite(-22, y, _shared.can_collect_bounty(i, drone_count) ? 0 : 1);
+				_pause_item_sprites.push_back(yesnosprite);
+
 				auto item = get_item_info(b.resource);
-				auto sprite = bn::sprite_items::dropped_items.create_sprite(-18, y);
+				auto sprite = bn::sprite_items::dropped_items.create_sprite(-8, y);
 				sprite.set_tiles(bn::sprite_items::dropped_items.tiles_item()
 								.create_tiles(item.sprite_index + _shared.get_frame_count() / 30 % 2));
 				_pause_item_sprites.push_back(sprite);
 
-				_small_text.generate(-12, y, item.display_name, _text_sprites);
+				_small_text.generate(-2, y, item.display_name, _text_sprites);
 
 				text.clear();
 				text_stream.append("$");
 				helpers::append_with_padding(text_stream, b.price, 3, ' ');
-				_small_text.generate(48, y, text, _text_sprites);
+				_small_text.generate(54, y, text, _text_sprites);
 			}
 		}
 
@@ -1063,6 +1067,19 @@ void mining_scene::_update_overlay_text() {
 		_small_text.generate(118, 79 - index * 9 - y, text, _text_sprites);
 
 		index++;
+	}
+
+	auto timer = _state.bounty_completed_timer();
+	if (timer > 0) {
+		_small_text.set_alignment(bn::sprite_text_generator::alignment_type::CENTER);
+
+		auto y = helpers::remap_fixed(timer, 15, 0, -50, -58);
+
+		auto check = bn::sprite_items::yesno.create_sprite(-28, y);
+		check.set_bg_priority(0);
+		_text_sprites.push_back(check);
+
+		_small_text.generate(0, y, " BOUNTY", _text_sprites);
 	}
 }
 
